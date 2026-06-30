@@ -2,11 +2,20 @@ import pygame
 import math
 import random
 from constants import *
+from engine.sprites import SpriteAssets
+
+TILE_ID_NAMES = {
+    T_WASTELAND: "WASTELAND", T_ASH: "ASH", T_RUBBLE: "RUBBLE", T_ROAD: "ROAD",
+    T_TOXIC_SEA: "TOXIC_SEA", T_RUIN_FLOOR: "RUIN_FLOOR", T_DUNGEON: "DUNGEON",
+    T_TOWN: "TOWN", T_WALL: "WALL", T_DOOR: "DOOR", T_CHEST: "CHEST",
+    T_SHRINE: "SHRINE", T_BRIDGE: "BRIDGE",
+}
 
 class Renderer:
     def __init__(self):
         self.surface = pygame.Surface((INTERNAL_W, INTERNAL_H))
         self._font   = None
+        self.assets  = SpriteAssets.get()
         self._particles = []
         self._shake_frames = 0
         self._shake_mag    = 0
@@ -192,22 +201,29 @@ class Renderer:
                     phase = (anim_tick // 20 + wx + wy) % 3
                     color = [(20,35,55),(25,45,60),(15,30,50)][phase]
 
-                pygame.draw.rect(self.surface, color, (px, py, TILE-1, TILE-1))
+                sprite = self.assets.world_tile(TILE_ID_NAMES.get(tile_id))
+                if sprite:
+                    self.surface.blit(sprite, (px, py))
+                else:
+                    pygame.draw.rect(self.surface, color, (px, py, TILE-1, TILE-1))
 
                 # Grid mark for special tiles
                 if tile_id in TILE_MARKS:
                     ch, mc = TILE_MARKS[tile_id]
                     self.draw_text(ch, px+4, py+4, mc, shadow=False)
 
-        # Party sprite (blinking skull)
+        # Party sprite
         px = (party.world_x - cam_x) * TILE
         py = (party.world_y - cam_y) * TILE
         blink = (anim_tick // 15) % 2
-        pcol = C_GOLD if blink else C_YELLOW
-        # Draw skull icon
-        pygame.draw.rect(self.surface, pcol, (px+4, py+4, 8, 8))
-        pygame.draw.rect(self.surface, C_BLACK, (px+5, py+6, 2, 2))
-        pygame.draw.rect(self.surface, C_BLACK, (px+9, py+6, 2, 2))
+        party_sprite = self.assets.character_frame()
+        if party_sprite:
+            self.surface.blit(party_sprite, (px, py))
+        else:
+            pcol = C_GOLD if blink else C_YELLOW
+            pygame.draw.rect(self.surface, pcol, (px+4, py+4, 8, 8))
+            pygame.draw.rect(self.surface, C_BLACK, (px+5, py+6, 2, 2))
+            pygame.draw.rect(self.surface, C_BLACK, (px+9, py+6, 2, 2))
 
         # HUD strip
         pygame.draw.rect(self.surface, C_BLACK, (0, INTERNAL_H - 16, INTERNAL_W, 16))
@@ -292,6 +308,11 @@ class Renderer:
         y += bob
         c  = enemy.color
         st = enemy.sprite_type
+
+        img = self.assets.monster_sprite(st)
+        if img:
+            self.surface.blit(img, (x, y))
+            return
 
         if "boss" in st:
             # Large boss sprite
@@ -609,7 +630,10 @@ class Renderer:
                 px = tx * TILE
                 py = ty * TILE
                 tile_id = dungeon.get_tile(wx, wy)
-                if tile_id == T_WALL:
+                sprite = self.assets.world_tile(TILE_ID_NAMES.get(tile_id))
+                if sprite:
+                    self.surface.blit(sprite, (px, py))
+                elif tile_id == T_WALL:
                     pygame.draw.rect(self.surface, (25, 20, 20), (px, py, TILE, TILE))
                     pygame.draw.rect(self.surface, (35, 30, 28), (px, py, TILE, 2))
                 elif tile_id == T_RUIN_FLOOR:
@@ -630,10 +654,14 @@ class Renderer:
         px2 = (party.world_x - cam_x) * TILE
         py2 = (party.world_y - cam_y) * TILE
         blink = (anim_tick // 20) % 2
-        pcol = C_GOLD if blink else C_YELLOW
-        pygame.draw.rect(self.surface, pcol, (px2+4, py2+4, 8, 8))
-        pygame.draw.rect(self.surface, C_BLACK, (px2+5, py2+6, 2, 2))
-        pygame.draw.rect(self.surface, C_BLACK, (px2+9, py2+6, 2, 2))
+        party_sprite = self.assets.character_frame()
+        if party_sprite:
+            self.surface.blit(party_sprite, (px2, py2))
+        else:
+            pcol = C_GOLD if blink else C_YELLOW
+            pygame.draw.rect(self.surface, pcol, (px2+4, py2+4, 8, 8))
+            pygame.draw.rect(self.surface, C_BLACK, (px2+5, py2+6, 2, 2))
+            pygame.draw.rect(self.surface, C_BLACK, (px2+9, py2+6, 2, 2))
 
         # Minimap
         self._draw_minimap(dungeon, party, anim_tick)
@@ -689,27 +717,39 @@ class Renderer:
                 px = tx * TILE
                 py = ty * TILE
                 tile_id = town.get_tile(wx, wy)
-                color = TOWN_COLORS.get(tile_id, (20, 15, 12))
-                pygame.draw.rect(self.surface, color, (px, py, TILE, TILE))
+                sprite = self.assets.world_tile(TILE_ID_NAMES.get(tile_id))
+                if sprite:
+                    self.surface.blit(sprite, (px, py))
+                else:
+                    color = TOWN_COLORS.get(tile_id, (20, 15, 12))
+                    pygame.draw.rect(self.surface, color, (px, py, TILE, TILE))
                 if tile_id == T_DOOR:
                     self.draw_text("D", px+4, py+4, C_RUST, shadow=False)
                 elif tile_id == T_SHRINE:
                     self.draw_text("+", px+4, py+4, C_GOLD, shadow=False)
 
         # NPCs
+        npc_sprite = self.assets.character_frame("soldier_altcolor.png")
         for npc in town.npcs:
             nx = (npc.x - cam_x) * TILE
             ny = (npc.y - cam_y) * TILE
             if 0 <= nx < INTERNAL_W and 0 <= ny < INTERNAL_H:
-                pygame.draw.rect(self.surface, npc.color, (nx+3, ny+3, 10, 12))
-                pygame.draw.rect(self.surface, C_BONE, (nx+5, ny+3, 6, 6))
+                if npc_sprite:
+                    self.surface.blit(npc_sprite, (nx, ny))
+                else:
+                    pygame.draw.rect(self.surface, npc.color, (nx+3, ny+3, 10, 12))
+                    pygame.draw.rect(self.surface, C_BONE, (nx+5, ny+3, 6, 6))
                 self.draw_text(npc.name[:4], nx, ny+16, C_MID_GREY, shadow=False)
 
         # Party
         px2 = (party.world_x - cam_x) * TILE
         py2 = (party.world_y - cam_y) * TILE
-        pygame.draw.rect(self.surface, C_GOLD, (px2+3, py2+3, 10, 12))
-        pygame.draw.rect(self.surface, C_BONE, (px2+5, py2+3, 6, 6))
+        party_sprite = self.assets.character_frame()
+        if party_sprite:
+            self.surface.blit(party_sprite, (px2, py2))
+        else:
+            pygame.draw.rect(self.surface, C_GOLD, (px2+3, py2+3, 10, 12))
+            pygame.draw.rect(self.surface, C_BONE, (px2+5, py2+3, 6, 6))
 
         # HUD
         pygame.draw.rect(self.surface, C_BLACK, (0, INTERNAL_H - 12, INTERNAL_W, 12))
