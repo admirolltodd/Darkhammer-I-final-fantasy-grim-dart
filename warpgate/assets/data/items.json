@@ -1,0 +1,393 @@
+{
+  "stimm_injector": {
+    "id": "stimm_injector", "name": "STIMM INJECTOR", "type": "CONSUMABLE",
+    "desc": "RESTORES 50 HP TO ONE ALLY.",
+    "effect": "heal", "value": 50, "target": "one_ally", "cost": 80
+  },
+  "sacred_ungent": {
+    "id": "sacred_ungent", "name": "SACRED UNGENT", "type": "CONSUMABLE",
+    "desc": "RESTORES 150 HP TO ONE ALLY. MACHINE-BLESSED.",
+    "effect": "heal", "value": 150, "target": "one_ally", "cost": 200
+  },
+  "combat_stims": {
+    "id": "combat_stims", "name": "COMBAT STIMS", "type": "CONSUMABLE",
+    "desc": "RESTORES 30 HP TO ALL ALLIES.",
+    "effect": "heal_all", "value": 30, "target": "all_allies", "cost": 300
+  },
+  "full_medicae": {
+    "id": "full_medicae", "name": "FULL MEDICAE KIT", "type": "CONSUMABLE",
+    "desc": "FULLY RESTORES ONE ALLY. SACRED MANUFACTURE.",
+    "effect": "full_heal", "value": 9999, "target": "one_ally", "cost": 1500
+  },
+  "antitox_shot": {
+    "id": "antitox_shot", "name": "ANTITOX SHOT", "type": "CONSUMABLE",
+    "desc": "REMOVES PLAGUE-TOUCHED STATUS.",
+    "effect": "cure_status", "value": 1, "target": "one_ally", "cost": 80
+  },
+  "purification_rite": {
+    "id": "purification_rite", "name": "PURIFICATION RITE", "type": "CONSUMABLE",
+    "desc": "REMOVES ALL STATUS EFFECTS FROM ONE ALLY.",
+    "effect": "cure_all_status", "value": 0, "target": "one_ally", "cost": 400
+  },
+  "gene_seed_vial": {
+    "id": "gene_seed_vial", "name": "GENE-SEED VIAL", "type": "CONSUMABLE",
+    "desc": "REVIVES ONE FALLEN ALLY WITH 25% HP.",
+    "effect": "revive", "value": 0.25, "target": "one_fallen", "cost": 800
+  },
+  "frag_grenade": {
+    "id": "frag_grenade", "name": "FRAG GRENADE", "type": "CONSUMABLE",
+    "desc": "DEALS 40 DAMAGE TO ALL ENEMIES.",
+    "effect": "damage_all", "value": 40, "target": "all_enemies", "cost": 120
+  },
+  "krak_grenade": {
+    "id": "krak_grenade", "name": "KRAK GRENADE", "type": "CONSUMABLE",
+    "desc": "DEALS 100 DAMAGE TO ONE ENEMY. IGNORES DEF.",
+    "effect": "damage_one_ignore_def", "value": 100, "target": "one_enemy", "cost": 300
+  },
+  "warp_dust": {
+    "id": "warp_dust", "name": "WARP DUST", "type": "CONSUMABLE",
+    "desc": "RESTORES 5 WARP CHARGES TO ONE PSYKER.",
+    "effect": "restore_resource", "value": 5, "resource": "warp", "target": "one_ally", "cost": 150
+  },
+  "incense_of_faith": {
+    "id": "incense_of_faith", "name": "INCENSE OF FAITH", "type": "CONSUMABLE",
+    "desc": "RESTORES 5 ACTS OF FAITH TO ONE SISTER.",
+    "effect": "restore_resource", "value": 5, "resource": "faith", "target": "one_ally", "cost": 150
+  },
+  "autogun_reconditioned": {
+    "id": "autogun_reconditioned", "name": "AUTOGUN, RECONDITIONED", "type": "WEAPON",
+    "slot": "MAIN", "desc": "BASIC RANGED WEAPON. RELIABLE IF NOTHING ELSE.",
+    "str_bonus": 2, "hit_bonus": 0, "agi_bonus": 0, "def_bonus": 0,
+    "dmg_type": "PHYSICAL", "classes": "all", "two_handed": false, "cost": 50
+  },
+  "bolt_pistol_mkiii": {
+    "id": "bolt_pistol_mkiii", "name": "BOLT PISTOL MK.III", "type": "WEAPON",
+    "slot": "MAIN", "desc": "STANDARD SIDEARM OF THE IMPERIUM.",
+    "str_bonus": 5, "hit_bonus": 5, "agi_bonus": 0, "def_bonus": 0,
+    "dmg_type": "PHYSICAL", "classes": "all", "two_handed": false, "cost": 150
+  },
+  "boltgun_godwyn": {
+    "id": "boltgun_godwyn", "name": "BOLTGUN, GODWYN PATTERN", "type": "WEAPON",
+    "slot": "MAIN", "desc": "THE BACKBONE OF THE ASTARTES ARSENAL.",
+    "str_bonus": 8, "hit_bonus": 8, "agi_bonus": 0, "def_bonus": 0,
+    "dmg_type": "PHYSICAL", "classes": ["ASTARTES", "INQUISITOR", "CHAPTER CHAMPION", "LORD INQUISITOR"],
+    "two_handed": false, "cost": 400
+  },
+  "laspistol_kantrael": {
+    "id": "laspistol_kantrael", "name": "LASPISTOL, KANTRAEL PATTERN", "type": "WEAPON",
+    "slot": "MAIN", "desc": "RELIABLE GUARDSMAN SIDEARM. NEVER JAMS.",
+    "str_bonus": 3, "hit_bonus": 10, "agi_bonus": 0, "def_bonus": 0,
+    "dmg_type": "PHYSICAL", "classes": "all", "two_handed": false, "cost": 100
+  },
+  "lasgun_kantrael": {
+    "id": "lasgun_kantrael", "name": "LASGUN, KANTRAEL MG IV", "type": "WEAPON",
+    "slot": "MAIN", "desc": "THE FLASHLIGHT THAT BUILT AN EMPIRE.",
+    "str_bonus": 6, "hit_bonus": 12, "agi_bonus": 0, "def_bonus": 0,
+    "dmg_type": "PHYSICAL", "classes": "all", "two_handed": true, "cost": 200
+  },
+  "plasma_gun_ryza": {
+    "id": "plasma_gun_ryza", "name": "PLASMA GUN, RYZA PATTERN", "type": "WEAPON",
+    "slot": "MAIN", "desc": "DEVASTATING. OCCASIONALLY LETHAL TO THE USER.",
+    "str_bonus": 16, "hit_bonus": 6, "agi_bonus": 0, "def_bonus": 0,
+    "dmg_type": "PHYSICAL", "classes": ["ASTARTES", "INQUISITOR", "CHAPTER CHAMPION", "LORD INQUISITOR"],
+    "overheat_chance": 0.10, "overheat_dmg": 20, "two_handed": true, "cost": 1200
+  },
+  "melta_gun": {
+    "id": "melta_gun", "name": "MELTA GUN", "type": "WEAPON",
+    "slot": "MAIN", "desc": "IT TURNS THINGS INTO VAPOUR. BRIEFLY.",
+    "str_bonus": 18, "hit_bonus": 0, "agi_bonus": 0, "def_bonus": 0,
+    "def_pierce": 0.5, "dmg_type": "FIRE",
+    "classes": ["ASTARTES", "SISTER", "CHAPTER CHAMPION", "CANONESS"],
+    "two_handed": true, "cost": 2000
+  },
+  "chainsword": {
+    "id": "chainsword", "name": "CHAINSWORD", "type": "WEAPON",
+    "slot": "MAIN", "desc": "REVVING TEETH OF ADAMANTIUM.",
+    "str_bonus": 7, "hit_bonus": 0, "agi_bonus": 0, "def_bonus": 0,
+    "status_on_hit": 6, "status_chance": 0.15, "dmg_type": "PHYSICAL",
+    "classes": "all", "two_handed": false, "cost": 300
+  },
+  "power_sword_blessed": {
+    "id": "power_sword_blessed", "name": "POWER SWORD, BLESSED", "type": "WEAPON",
+    "slot": "MAIN", "desc": "DISRUPTION FIELD ALIGNED TO HOLY FREQUENCIES.",
+    "str_bonus": 12, "hit_bonus": 5, "agi_bonus": 0, "def_bonus": 0,
+    "dmg_type": "PHYSICAL", "chaos_bonus": 8,
+    "classes": ["ASTARTES", "INQUISITOR", "COMMISSAR", "CHAPTER CHAMPION", "LORD INQUISITOR", "LORD COMMISSAR"],
+    "two_handed": false, "cost": 900
+  },
+  "power_fist": {
+    "id": "power_fist", "name": "POWER FIST, IRON PATTERN", "type": "WEAPON",
+    "slot": "MAIN", "desc": "CRUSHES TANKS. SLOWLY.",
+    "str_bonus": 20, "hit_bonus": 0, "agi_bonus": -3, "def_bonus": 0,
+    "def_pierce_flat": true, "dmg_type": "PHYSICAL",
+    "classes": ["ASTARTES", "CHAPTER CHAMPION"],
+    "two_handed": false, "cost": 1800
+  },
+  "thunder_hammer": {
+    "id": "thunder_hammer", "name": "THUNDER HAMMER", "type": "WEAPON",
+    "slot": "MAIN", "desc": "LIGHTNING-WREATHED. CAUSES STRUCTURAL FAILURE.",
+    "str_bonus": 18, "hit_bonus": 0, "agi_bonus": -4, "def_bonus": 0,
+    "status_on_hit": 8, "status_chance": 0.30, "dmg_type": "PHYSICAL",
+    "classes": ["ASTARTES", "CHAPTER CHAMPION"],
+    "two_handed": true, "cost": 2500
+  },
+  "force_staff": {
+    "id": "force_staff", "name": "FORCE STAFF, LIBRARIAN'S", "type": "WEAPON",
+    "slot": "MAIN", "desc": "CHANNELS PSYCHIC FORCE INTO PHYSICAL BLOWS.",
+    "str_bonus": 6, "hit_bonus": 0, "agi_bonus": 0, "def_bonus": 0,
+    "psy_bonus": 8, "warp_max_bonus": 3, "dmg_type": "WARP",
+    "classes": ["PSYKER", "PRIMARIS PSYKER"],
+    "two_handed": true, "cost": 600
+  },
+  "eviscerator": {
+    "id": "eviscerator", "name": "EVISCERATOR, SORORITAS", "type": "WEAPON",
+    "slot": "MAIN", "desc": "CHAINSWORD OF EXTRAORDINARY PIETY AND SIZE.",
+    "str_bonus": 15, "hit_bonus": 0, "agi_bonus": 0, "def_bonus": 0,
+    "holy_bonus": 10, "dmg_type": "PHYSICAL",
+    "classes": ["SISTER", "CANONESS"],
+    "two_handed": true, "cost": 1500
+  },
+  "omnissian_axe": {
+    "id": "omnissian_axe", "name": "OMNISSIAN AXE", "type": "WEAPON",
+    "slot": "MAIN", "desc": "SACRED TO THE MACHINE GOD. MECHANICUS ONLY.",
+    "str_bonus": 10, "hit_bonus": 0, "agi_bonus": 0, "def_bonus": 5,
+    "dmg_type": "PHYSICAL",
+    "classes": ["TECH_PRIEST", "MAGOS DOMINUS"],
+    "two_handed": true, "cost": 700
+  },
+  "flak_armour": {
+    "id": "flak_armour", "name": "FLAK ARMOUR, GUARD ISSUE", "type": "BODY",
+    "slot": "BODY", "desc": "STANDARD ISSUE. BETTER THAN NOTHING.",
+    "def_bonus": 8, "classes": "all", "cost": 100
+  },
+  "carapace_armour": {
+    "id": "carapace_armour", "name": "CARAPACE ARMOUR, ARBITES", "type": "BODY",
+    "slot": "BODY", "desc": "SOLID PLATE. RESTRICTS MOVEMENT SOMEWHAT.",
+    "def_bonus": 14, "agi_bonus": -1, "classes": "all", "cost": 400
+  },
+  "power_armour_corvus": {
+    "id": "power_armour_corvus", "name": "POWER ARMOUR MK.VI CORVUS", "type": "BODY",
+    "slot": "BODY", "desc": "THE RAVEN HELM. HONOURED BY A THOUSAND CAMPAIGNS.",
+    "def_bonus": 20, "mrst_bonus": 5,
+    "classes": ["ASTARTES", "CHAPTER CHAMPION"], "cost": 1200
+  },
+  "power_armour_aquila": {
+    "id": "power_armour_aquila", "name": "POWER ARMOUR MK.VII AQUILA", "type": "BODY",
+    "slot": "BODY", "desc": "THE MOST COMMON MARK. THE AQUILA SHINES.",
+    "def_bonus": 24, "str_bonus": 2,
+    "classes": ["ASTARTES", "CHAPTER CHAMPION"], "cost": 2000
+  },
+  "terminator_armour": {
+    "id": "terminator_armour", "name": "TERMINATOR ARMOUR", "type": "BODY",
+    "slot": "BODY", "desc": "TACTICAL DREADNOUGHT ARMOUR. NEAR INVULNERABLE.",
+    "def_bonus": 35, "str_bonus": 5, "agi_bonus": -3,
+    "classes": ["ASTARTES", "CHAPTER CHAMPION"], "cost": 5000
+  },
+  "sororitas_power_armour": {
+    "id": "sororitas_power_armour", "name": "SORORITAS POWER ARMOUR", "type": "BODY",
+    "slot": "BODY", "desc": "CERAMITE BLESSED BY THE ECCLESIARCHY.",
+    "def_bonus": 18, "faith_bonus": 3,
+    "classes": ["SISTER", "CANONESS"], "cost": 1500
+  },
+  "inquisitorial_storm_coat": {
+    "id": "inquisitorial_storm_coat", "name": "INQUISITORIAL STORM COAT", "type": "BODY",
+    "slot": "BODY", "desc": "ALL RESISTANCES INCREASE. BECAUSE HERESY IS EVERYWHERE.",
+    "def_bonus": 10, "all_resist": 10,
+    "classes": ["INQUISITOR", "LORD INQUISITOR"], "cost": 1800
+  },
+  "psyker_robes": {
+    "id": "psyker_robes", "name": "PSYKER ROBES, SANCTIONED", "type": "BODY",
+    "slot": "BODY", "desc": "RUNIC WARDS WOVEN INTO THE FABRIC.",
+    "def_bonus": 4, "psy_bonus": 5, "warp_max_bonus": 5,
+    "classes": ["PSYKER", "PRIMARIS PSYKER"], "cost": 600
+  },
+  "mechanicus_robes": {
+    "id": "mechanicus_robes", "name": "MECHANICUS ROBES, REINFORCED", "type": "BODY",
+    "slot": "BODY", "desc": "MECHADENDRITE PORTS BUILT INTO THE CHASSIS.",
+    "def_bonus": 12,
+    "classes": ["TECH_PRIEST", "MAGOS DOMINUS"], "cost": 800
+  },
+  "purity_seal": {
+    "id": "purity_seal", "name": "PURITY SEAL", "type": "RELIC",
+    "slot": "RELIC", "desc": "BLESSED BY A CHAPLAIN. PROVIDES MODEST PROTECTION.",
+    "faith_bonus": 3, "warp_mad_resist": 10, "cost": 200
+  },
+  "iron_halo": {
+    "id": "iron_halo", "name": "IRON HALO, CRUX PATTERN", "type": "RELIC",
+    "slot": "RELIC", "desc": "10% CHANCE TO NEGATE ALL DAMAGE FROM ONE HIT.",
+    "negate_chance": 0.10, "cost": 1500
+  },
+  "servo_skull_targeting": {
+    "id": "servo_skull_targeting", "name": "SERVO-SKULL, TARGETING", "type": "RELIC",
+    "slot": "RELIC", "desc": "CALCULATES OPTIMAL FIRING SOLUTIONS.",
+    "hit_bonus": 15, "cost": 600
+  },
+  "servo_skull_warding": {
+    "id": "servo_skull_warding", "name": "SERVO-SKULL, WARDING", "type": "RELIC",
+    "slot": "RELIC", "desc": "INTERCEPTS INCOMING ROUNDS.",
+    "eva_bonus": 15, "cost": 600
+  },
+  "gene_seed_vial_relic": {
+    "id": "gene_seed_vial_relic", "name": "GENE-SEED VIAL, PRESERVED", "type": "RELIC",
+    "slot": "RELIC", "desc": "PASSIVE: SURVIVE ONE LETHAL BLOW WITH 1 HP. SINGLE USE.",
+    "survive_lethal": true, "one_use": true, "cost": 2000
+  },
+  "oath_of_moment": {
+    "id": "oath_of_moment", "name": "OATH OF MOMENT, INSCRIBED", "type": "RELIC",
+    "slot": "RELIC", "desc": "+5 STR VS BOSS-TYPE ENEMIES.",
+    "str_vs_boss": 5, "cost": 1000
+  },
+  "cogitator_implant": {
+    "id": "cogitator_implant", "name": "COGITATOR IMPLANT", "type": "RELIC",
+    "slot": "RELIC", "desc": "PROCESSING SPEED ENHANCED. REFLEXES IMPROVED.",
+    "psy_bonus": 4, "agi_bonus": 3, "cost": 900
+  },
+  "rosette_inquisition": {
+    "id": "rosette_inquisition", "name": "ROSETTE OF THE INQUISITION", "type": "RELIC",
+    "slot": "RELIC", "desc": "ONCE PER BATTLE: ALL ENEMIES PANIC.",
+    "mrst_bonus": 10, "once_per_battle": "panic_all", "cost": 3000
+  },
+  "medallion_crimson": {
+    "id": "medallion_crimson", "name": "MEDALLION CRIMSON", "type": "RELIC",
+    "slot": "RELIC", "desc": "AWARDED FOR EXCEPTIONAL WOUNDS RECEIVED.",
+    "hp_bonus": 25, "def_bonus": 3, "cost": 800
+  },
+  "null_rod": {
+    "id": "null_rod", "name": "NULL ROD, PARIAH-CARVED", "type": "RELIC",
+    "slot": "RELIC", "desc": "PSYCHIC EMANATIONS REDUCED IN RADIUS.",
+    "enemy_psy_reduce": 0.25, "cost": 1200
+  },
+  "relic_of_saints": {
+    "id": "relic_of_saints", "name": "RELIC OF THE IMPERIAL SAINTS", "type": "RELIC",
+    "slot": "RELIC", "desc": "FAITH AMPLIFIED. RESURRECTIONS UNCONSTRAINED.",
+    "faith_bonus": 8, "no_rez_cooldown": true, "cost": 4000
+  },
+  "orky_relic": {
+    "id": "orky_relic", "name": "ORKY RELIC", "type": "RELIC",
+    "slot": "RELIC", "desc": "+8 STR. 15% CHANCE ENEMIES FIGHT EACH OTHER.",
+    "str_bonus": 8, "confuse_enemy_chance": 0.15, "cost": 0
+  },
+  "autarch_scorpion_sword": {
+    "id": "autarch_scorpion_sword", "name": "AUTARCH'S SCORPION SWORD", "type": "WEAPON",
+    "slot": "MAIN", "desc": "ALIEN CRAFTSMANSHIP. IMPOSSIBLY SHARP.",
+    "str_bonus": 28, "hit_bonus": 15, "agi_bonus": 5, "def_bonus": 0,
+    "dmg_type": "PHYSICAL", "classes": "all",
+    "two_handed": false, "cost": 0
+  },
+  "traitors_boltgun": {
+    "id": "traitors_boltgun", "name": "TRAITOR'S BOLTGUN", "type": "WEAPON",
+    "slot": "MAIN", "desc": "HIGH DAMAGE. TAINTED BY CHAOS. MRST -5.",
+    "str_bonus": 14, "hit_bonus": 6, "mrst_bonus": -5,
+    "dmg_type": "PHYSICAL", "classes": "all", "two_handed": false, "cost": 0
+  },
+  "governors_seal": {
+    "id": "governors_seal", "name": "GOVERNOR'S SEAL", "type": "KEY",
+    "slot": null, "desc": "GRANTS ACCESS TO RESTRICTED AREAS OF THE HIVE SPIRE.",
+    "cost": 0
+  },
+  "synapse_disruptor": {
+    "id": "synapse_disruptor", "name": "SYNAPSE DISRUPTOR", "type": "KEY",
+    "slot": null, "desc": "DISRUPTS TYRANID NEURAL CONTROL OF A SECTOR.",
+    "cost": 0
+  },
+  "anathema_shard": {
+    "id": "anathema_shard", "name": "THE ANATHEMA SHARD", "type": "KEY",
+    "slot": null, "desc": "A FRAGMENT OF THE EMPEROR'S CRYSTALLIZED WILL.",
+    "cost": 0
+  },
+  "underhive_keycard": {
+    "id": "underhive_keycard", "name": "UNDERHIVE KEYCARD", "type": "KEY",
+    "slot": null, "desc": "OPENS A SEALED GATE IN THE WASTELAND.",
+    "cost": 0
+  },
+  "chaos_tome": {
+    "id": "chaos_tome", "name": "CHAOS TOME", "type": "CONSUMABLE",
+    "desc": "TEACHES A PSYKER A RANDOM DISCIPLINE POWER.",
+    "effect": "teach_random_power", "value": 0, "target": "one_psyker",
+    "corrupt": 10, "cost": 500
+  },
+  "chainaxe": {
+    "id": "chainaxe", "name": "CHAINAXE", "type": "WEAPON",
+    "slot": "MAIN", "desc": "BRUTAL. EFFECTIVE. STILL RUNNING ON WHATEVER POWERS IT.",
+    "str_bonus": 13, "hit_bonus": 0, "dmg_type": "PHYSICAL",
+    "classes": "all", "two_handed": false, "cost": 0
+  },
+  "ork_choppa": {
+    "id": "ork_choppa", "name": "ORK CHOPPA", "type": "WEAPON",
+    "slot": "MAIN", "desc": "CRUDE ORK BLADE. HEAVY. EFFECTIVE IN THE RIGHT HANDS.",
+    "str_bonus": 9, "hit_bonus": 0, "dmg_type": "PHYSICAL",
+    "classes": "all", "two_handed": false, "cost": 0
+  },
+  "ork_shoota": {
+    "id": "ork_shoota", "name": "ORK SHOOTA", "type": "WEAPON",
+    "slot": "MAIN", "desc": "LOTS OF BULLETS. QUESTIONABLE ACCURACY. NOISE IS THE POINT.",
+    "str_bonus": 7, "hit_bonus": -5, "agi_bonus": 0, "def_bonus": 0,
+    "dmg_type": "PHYSICAL", "classes": "all", "two_handed": true, "cost": 0
+  },
+  "nob_armour_plate": {
+    "id": "nob_armour_plate", "name": "NOB ARMOUR PLATE", "type": "RELIC",
+    "slot": "RELIC", "desc": "SALVAGED FROM A NOB. HEAVY BUT EFFECTIVE.",
+    "def_bonus": 6, "str_bonus": 2, "cost": 0
+  },
+  "mega_armour_chunk": {
+    "id": "mega_armour_chunk", "name": "MEGA ARMOUR CHUNK", "type": "RELIC",
+    "slot": "RELIC", "desc": "A FRAGMENT OF ORK MEGA-ARMOUR. DENSE AND USEFUL.",
+    "def_bonus": 10, "agi_bonus": -1, "cost": 0
+  },
+  "weirdboy_staff": {
+    "id": "weirdboy_staff", "name": "WEIRDBOY'S STAFF", "type": "WEAPON",
+    "slot": "MAIN", "desc": "CRACKLING WITH CRUDE WARP ENERGY. UNPREDICTABLE.",
+    "str_bonus": 8, "psy_bonus": 4, "warp_max_bonus": 2, "dmg_type": "WARP",
+    "classes": ["PSYKER", "INQUISITOR", "PRIMARIS PSYKER", "LORD INQUISITOR"],
+    "two_handed": true, "cost": 0
+  },
+  "kff_component": {
+    "id": "kff_component", "name": "KFF COMPONENT", "type": "RELIC",
+    "slot": "RELIC", "desc": "KUSTOM FORCE FIELD TECH. 12% CHANCE TO NEGATE ALL DAMAGE.",
+    "negate_chance": 0.12, "cost": 0
+  },
+  "dread_chassis_scrap": {
+    "id": "dread_chassis_scrap", "name": "DEFF DREAD SCRAP", "type": "CONSUMABLE",
+    "desc": "SALVAGED MACHINE PARTS. A TECH-PRIEST COULD DO SOMETHING WITH THIS.",
+    "effect": "restore_resource", "value": 8, "resource": "cooldown", "target": "one_ally", "cost": 0
+  },
+  "snazzgun": {
+    "id": "snazzgun", "name": "SNAZZGUN", "type": "WEAPON",
+    "slot": "MAIN", "desc": "A FLASH GIT'S KUSTOM WEAPON. ABSURDLY OVER-ENGINEERED.",
+    "str_bonus": 14, "hit_bonus": 10, "agi_bonus": 2,
+    "dmg_type": "PHYSICAL", "classes": "all", "two_handed": true, "cost": 0
+  },
+  "squig_hide": {
+    "id": "squig_hide", "name": "CAVE SQUIG HIDE", "type": "CONSUMABLE",
+    "desc": "THICK. LEATHERY. SELLABLE FOR A DECENT PRICE.",
+    "effect": "heal", "value": 80, "target": "one_ally", "cost": 0
+  },
+  "gorkamorka_banner": {
+    "id": "gorkamorka_banner", "name": "GORKAMORKA'S BANNER", "type": "KEY",
+    "slot": null, "desc": "PROOF THAT WARBOSS GORKAMORKA HAS BEEN DEFEATED. THE BOYZ ARE LEADERLESS.",
+    "cost": 0
+  },
+  "great_squiggoth_tusk": {
+    "id": "great_squiggoth_tusk", "name": "GREAT SQUIGGOTH TUSK", "type": "KEY",
+    "slot": null, "desc": "FROM THE LARGEST BEAST IN THE FUNGAL CAVES. PROOF OF VICTORY.",
+    "cost": 0
+  },
+  "grotnik_tools": {
+    "id": "grotnik_tools", "name": "GROTSNIK'S TOOLS", "type": "KEY",
+    "slot": null, "desc": "MAD DOK'S SURGICAL INSTRUMENTS AND SCHEMATICS. CONTAINS THE GARGANT BLUEPRINTS.",
+    "cost": 0
+  },
+  "ghazghkull_banner": {
+    "id": "ghazghkull_banner", "name": "GHAZGHKULL'S BANNER", "type": "KEY",
+    "slot": null, "desc": "TORN FROM THE PROPHET OF THE WAAAGH! HIMSELF. ARMAGEDDON WILL REMEMBER.",
+    "cost": 0
+  },
+  "skullkrumpa_klaw": {
+    "id": "skullkrumpa_klaw", "name": "SKULLKRUMPA'S POWER KLAW", "type": "WEAPON",
+    "slot": "MAIN", "desc": "RIPPED FROM WARBOSS SKULLKRUMPA'S OWN ARM. EXTREMELY HEAVY.",
+    "str_bonus": 24, "hit_bonus": 0, "agi_bonus": -5, "def_bonus": 0,
+    "def_pierce_flat": true, "dmg_type": "PHYSICAL",
+    "classes": ["ASTARTES", "CHAPTER CHAMPION"],
+    "two_handed": false, "cost": 0
+  }
+}
