@@ -308,8 +308,86 @@
   },
   "chainaxe": {
     "id": "chainaxe", "name": "CHAINAXE", "type": "WEAPON",
-    "slot": "MAIN", "desc": "KHORNATE. BRUTAL. EFFECTIVE.",
+    "slot": "MAIN", "desc": "BRUTAL. EFFECTIVE. STILL RUNNING ON WHATEVER POWERS IT.",
     "str_bonus": 13, "hit_bonus": 0, "dmg_type": "PHYSICAL",
     "classes": "all", "two_handed": false, "cost": 0
+  },
+  "ork_choppa": {
+    "id": "ork_choppa", "name": "ORK CHOPPA", "type": "WEAPON",
+    "slot": "MAIN", "desc": "CRUDE ORK BLADE. HEAVY. EFFECTIVE IN THE RIGHT HANDS.",
+    "str_bonus": 9, "hit_bonus": 0, "dmg_type": "PHYSICAL",
+    "classes": "all", "two_handed": false, "cost": 0
+  },
+  "ork_shoota": {
+    "id": "ork_shoota", "name": "ORK SHOOTA", "type": "WEAPON",
+    "slot": "MAIN", "desc": "LOTS OF BULLETS. QUESTIONABLE ACCURACY. NOISE IS THE POINT.",
+    "str_bonus": 7, "hit_bonus": -5, "agi_bonus": 0, "def_bonus": 0,
+    "dmg_type": "PHYSICAL", "classes": "all", "two_handed": true, "cost": 0
+  },
+  "nob_armour_plate": {
+    "id": "nob_armour_plate", "name": "NOB ARMOUR PLATE", "type": "RELIC",
+    "slot": "RELIC", "desc": "SALVAGED FROM A NOB. HEAVY BUT EFFECTIVE.",
+    "def_bonus": 6, "str_bonus": 2, "cost": 0
+  },
+  "mega_armour_chunk": {
+    "id": "mega_armour_chunk", "name": "MEGA ARMOUR CHUNK", "type": "RELIC",
+    "slot": "RELIC", "desc": "A FRAGMENT OF ORK MEGA-ARMOUR. DENSE AND USEFUL.",
+    "def_bonus": 10, "agi_bonus": -1, "cost": 0
+  },
+  "weirdboy_staff": {
+    "id": "weirdboy_staff", "name": "WEIRDBOY'S STAFF", "type": "WEAPON",
+    "slot": "MAIN", "desc": "CRACKLING WITH CRUDE WARP ENERGY. UNPREDICTABLE.",
+    "str_bonus": 8, "psy_bonus": 4, "warp_max_bonus": 2, "dmg_type": "WARP",
+    "classes": ["PSYKER", "INQUISITOR", "PRIMARIS PSYKER", "LORD INQUISITOR"],
+    "two_handed": true, "cost": 0
+  },
+  "kff_component": {
+    "id": "kff_component", "name": "KFF COMPONENT", "type": "RELIC",
+    "slot": "RELIC", "desc": "KUSTOM FORCE FIELD TECH. 12% CHANCE TO NEGATE ALL DAMAGE.",
+    "negate_chance": 0.12, "cost": 0
+  },
+  "dread_chassis_scrap": {
+    "id": "dread_chassis_scrap", "name": "DEFF DREAD SCRAP", "type": "CONSUMABLE",
+    "desc": "SALVAGED MACHINE PARTS. A TECH-PRIEST COULD DO SOMETHING WITH THIS.",
+    "effect": "restore_resource", "value": 8, "resource": "cooldown", "target": "one_ally", "cost": 0
+  },
+  "snazzgun": {
+    "id": "snazzgun", "name": "SNAZZGUN", "type": "WEAPON",
+    "slot": "MAIN", "desc": "A FLASH GIT'S KUSTOM WEAPON. ABSURDLY OVER-ENGINEERED.",
+    "str_bonus": 14, "hit_bonus": 10, "agi_bonus": 2,
+    "dmg_type": "PHYSICAL", "classes": "all", "two_handed": true, "cost": 0
+  },
+  "squig_hide": {
+    "id": "squig_hide", "name": "CAVE SQUIG HIDE", "type": "CONSUMABLE",
+    "desc": "THICK. LEATHERY. SELLABLE FOR A DECENT PRICE.",
+    "effect": "heal", "value": 80, "target": "one_ally", "cost": 0
+  },
+  "gorkamorka_banner": {
+    "id": "gorkamorka_banner", "name": "GORKAMORKA'S BANNER", "type": "KEY",
+    "slot": null, "desc": "PROOF THAT WARBOSS GORKAMORKA HAS BEEN DEFEATED. THE BOYZ ARE LEADERLESS.",
+    "cost": 0
+  },
+  "great_squiggoth_tusk": {
+    "id": "great_squiggoth_tusk", "name": "GREAT SQUIGGOTH TUSK", "type": "KEY",
+    "slot": null, "desc": "FROM THE LARGEST BEAST IN THE FUNGAL CAVES. PROOF OF VICTORY.",
+    "cost": 0
+  },
+  "grotnik_tools": {
+    "id": "grotnik_tools", "name": "GROTSNIK'S TOOLS", "type": "KEY",
+    "slot": null, "desc": "MAD DOK'S SURGICAL INSTRUMENTS AND SCHEMATICS. CONTAINS THE GARGANT BLUEPRINTS.",
+    "cost": 0
+  },
+  "ghazghkull_banner": {
+    "id": "ghazghkull_banner", "name": "GHAZGHKULL'S BANNER", "type": "KEY",
+    "slot": null, "desc": "TORN FROM THE PROPHET OF THE WAAAGH! HIMSELF. ARMAGEDDON WILL REMEMBER.",
+    "cost": 0
+  },
+  "skullkrumpa_klaw": {
+    "id": "skullkrumpa_klaw", "name": "SKULLKRUMPA'S POWER KLAW", "type": "WEAPON",
+    "slot": "MAIN", "desc": "RIPPED FROM WARBOSS SKULLKRUMPA'S OWN ARM. EXTREMELY HEAVY.",
+    "str_bonus": 24, "hit_bonus": 0, "agi_bonus": -5, "def_bonus": 0,
+    "def_pierce_flat": true, "dmg_type": "PHYSICAL",
+    "classes": ["ASTARTES", "CHAPTER CHAMPION"],
+    "two_handed": false, "cost": 0
   }
 }

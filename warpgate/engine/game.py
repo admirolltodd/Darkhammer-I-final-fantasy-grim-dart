@@ -418,18 +418,24 @@ class Game:
                 self.party.location = name
                 break
         else:
-            self.party.location = "MORTIS WASTES"
+            self.party.location = "ARMAGEDDON ASH WASTES"
 
     def _get_world_zone(self, x, y):
-        # Determine zone by position
+        zone_map = {
+            "dungeon1": ZONE_ENCAMPMENT,
+            "dungeon2": ZONE_FUNGAL_CAVES,
+            "dungeon3": ZONE_MANUFACTORUM,
+            "dungeon_void": ZONE_ROK,
+            "dungeon_final": ZONE_IRON_FORTRESS,
+        }
         for lx, ly, tid, name, ltype, lid in self.locations:
             if abs(x - lx) < 4 and abs(y - ly) < 4 and ltype == "dungeon":
-                return lid.replace("dungeon", "").strip("_") or ZONE_UNDERHIVE
+                return zone_map.get(lid, ZONE_ASH_WASTES)
         if x > 40 or y > 40:
-            return ZONE_CITADEL
+            return ZONE_IRON_FORTRESS
         if 18 <= x <= 28 and 18 <= y <= 32:
-            return ZONE_PLAGUEFELD
-        return ZONE_WASTELAND
+            return ZONE_FUNGAL_CAVES
+        return ZONE_ASH_WASTES
 
     def _enter_town(self):
         tile = self.world.get_tile(self.party.world_x, self.party.world_y)
@@ -449,18 +455,19 @@ class Game:
         for lx, ly, tid, name, ltype, lid in self.locations:
             if self.party.world_x == lx and self.party.world_y == ly and ltype == "dungeon":
                 # Check if accessible
-                if lid == "dungeon2" and not self.party.get_flag(FLAG_DUNGEON1_CLEAR):
-                    self._show_dialogue("THE WAY IS SEALED", "WL",
-                                        ["THE PASSAGE IS LOCKED. FIND THE UNDERHIVE KEYCARD."], STATE_WORLD)
-                    return
-                if lid == "dungeon3" and not self.party.get_flag(FLAG_DUNGEON2_CLEAR):
-                    self._show_dialogue("THE WAY IS SEALED", "WL",
-                                        ["THE IRON KEEP GATES ARE SEALED. DEAL WITH THE TYRANID THREAT FIRST."],
+                if lid == "dungeon2" and not self.party.get_flag(FLAG_ENCAMPMENT_CLEAR):
+                    self._show_dialogue("ADVANCE DENIED", "WL",
+                                        ["THE FUNGAL CAVES ARE IMPASSABLE. CLEAR ORK ENCAMPMENT ALPHA FIRST."],
                                         STATE_WORLD)
                     return
-                if lid == "dungeon_final" and not self.party.get_flag(FLAG_DUNGEON3_CLEAR):
-                    self._show_dialogue("THE WAY IS SEALED", "WL",
-                                        ["THE CITADEL IS SEALED. YOU NEED THE GOVERNOR'S SEAL TO PROCEED."],
+                if lid == "dungeon3" and not self.party.get_flag(FLAG_CAVES_CLEAR):
+                    self._show_dialogue("ADVANCE DENIED", "WL",
+                                        ["THE MANUFACTORUM IS SWARMING. CLEAR THE FUNGAL CAVES FIRST."],
+                                        STATE_WORLD)
+                    return
+                if lid == "dungeon_final" and not self.party.get_flag(FLAG_MANUFACTORUM_CLEAR):
+                    self._show_dialogue("ADVANCE DENIED", "WL",
+                                        ["THE IRON FORTRESS IS SEALED. DEFEAT MAD DOK GROTSNIK IN THE MANUFACTORUM FIRST."],
                                         STATE_WORLD)
                     return
 
@@ -478,9 +485,9 @@ class Game:
                 return
 
     def _world_shrine(self):
-        self._show_dialogue("IMPERIAL SHRINE", "SH",
-                            ["THE EMPEROR'S PRESENCE IS FELT HERE. YOUR PARTY IS RESTORED.",
-                             "YOUR ACTIONS ARE RECORDED IN THE EMPEROR'S LEDGER."],
+        self._show_dialogue("BATTLEFIELD SHRINE", "SH",
+                            ["THE EMPEROR'S PRESENCE IS FELT EVEN HERE, ON ARMAGEDDON. YOUR PARTY IS RESTORED.",
+                             "ARMAGEDDON WILL HOLD. IT MUST."],
                             STATE_WORLD)
         self.party.rest_at_shrine()
         self.audio.play_sfx("heal")
@@ -510,7 +517,7 @@ class Game:
             if tile == T_SHRINE:
                 self.party.rest_at_shrine()
                 self._show_dialogue("IMPERIAL SHRINE", "SH",
-                                    ["THE EMPEROR SEES YOUR SERVICE. PARTY FULLY RESTORED."], STATE_TOWN)
+                                    ["THE EMPEROR SEES YOUR SERVICE ON ARMAGEDDON. PARTY FULLY RESTORED."], STATE_TOWN)
                 self.audio.play_sfx("heal")
             elif tile == T_DOOR:
                 # Open shop
@@ -603,7 +610,7 @@ class Game:
                         self._complete_dungeon()
 
     def _start_boss_fight(self, boss, boss_id):
-        if boss_id == "daemon_prince_xerathul_p1" and not self.party.get_flag(FLAG_MIDPOINT_SEEN):
+        if boss_id == "ghazghkull_p1" and not self.party.get_flag(FLAG_MIDPOINT_SEEN):
             self._show_story_sequence(loader.story()["before_final_boss"], STATE_BATTLE)
         self._start_battle([boss], is_boss=True, boss_id=boss_id)
 
@@ -671,16 +678,16 @@ class Game:
 
     def _start_encounter(self, zone, scale=1.0):
         zone_enemies = {
-            ZONE_UNDERHIVE:  ["chaos_cultist", "chaos_cultist_champion", "plaguebearer", "bloodletter"],
-            ZONE_WASTELAND:  ["chaos_cultist", "bloodletter", "pink_horror", "daemonette"],
-            ZONE_PLAGUEFELD: ["plaguebearer", "plague_marine", "chaos_cultist"],
-            ZONE_BURROW:     ["hormagaunt", "termagant", "tyranid_warrior", "genestealer"],
-            ZONE_IRON_KEEP:  ["chaos_space_marine", "chaos_sorcerer", "khorne_berserker",
-                              "noise_marine", "rubric_marine"],
-            ZONE_VOID:       ["necron_warrior", "necron_immortal", "flayed_one", "canoptek_scarabs"],
-            ZONE_CITADEL:    ["chaos_space_marine", "rubric_marine", "necron_warrior", "plague_marine"],
+            ZONE_ASH_WASTES:    ["gretchin", "ork_boy_slugga", "ork_boy_shoota",
+                                 "stormboy", "warbike_ork", "flash_git", "kommando"],
+            ZONE_ENCAMPMENT:    ["ork_boy_slugga", "ork_boy_shoota", "stormboy",
+                                 "ork_nob", "weirdboy", "ork_squig"],
+            ZONE_FUNGAL_CAVES:  ["weirdboy", "kommando", "ork_squig", "fungus_beast"],
+            ZONE_MANUFACTORUM:  ["ork_nob", "ork_meganob", "weirdboy", "big_mek", "deff_dread"],
+            ZONE_IRON_FORTRESS: ["ork_meganob", "big_mek", "deff_dread", "flash_git"],
+            ZONE_ROK:           ["flash_git", "ork_nob", "ork_meganob", "warbike_ork"],
         }
-        pool = zone_enemies.get(zone, ["chaos_cultist"])
+        pool = zone_enemies.get(zone, ["gretchin"])
         count = random.randint(1, min(4, 1 + len(pool) // 2))
         enemies = []
         for _ in range(count):
@@ -929,28 +936,41 @@ class Game:
 
     def _handle_boss_victory(self):
         boss_id = self.battle_boss_id
-        if boss_id == "lord_malachar":
-            self.party.set_flag(FLAG_DUNGEON3_CLEAR)
+        if boss_id == "ork_warboss_gorkamorka":
+            self.party.set_flag(FLAG_ENCAMPMENT_CLEAR)
+            if "gorkamorka_banner" in self.item_db:
+                self.party.add_item("gorkamorka_banner")
+            self._complete_dungeon()
+        elif boss_id == "squiggoth_great":
+            self.party.set_flag(FLAG_CAVES_CLEAR)
+            if "great_squiggoth_tusk" in self.item_db:
+                self.party.add_item("great_squiggoth_tusk")
+            self._complete_dungeon()
+        elif boss_id == "mad_dok":
+            self.party.set_flag(FLAG_MANUFACTORUM_CLEAR)
+            if "grotnik_tools" in self.item_db:
+                self.party.add_item("grotnik_tools")
+            self._complete_dungeon()
             if not self.party.get_flag(FLAG_MIDPOINT_SEEN):
                 self.party.set_flag(FLAG_MIDPOINT_SEEN)
-                self._show_story_sequence(loader.story()["midpoint"], STATE_DUNGEON)
+                self._show_story_sequence(loader.story()["midpoint"], STATE_WORLD)
+        elif boss_id == "ghazghkull_p1":
+            # Phase 2 transition — WAAAGH! reaches full intensity
+            if "ghazghkull_p2" in self.enemy_db:
+                edata = dict(self.enemy_db["ghazghkull_p2"], id="ghazghkull_p2")
+                self._start_battle([Enemy(edata)], is_boss=True, boss_id="ghazghkull_p2")
             else:
-                self._complete_dungeon()
-        elif boss_id == "broodlord_gnawfang":
-            self.party.set_flag(FLAG_DUNGEON2_CLEAR)
-            key = self.item_db.get("synapse_disruptor")
-            if key:
-                self.party.add_item("synapse_disruptor")
-            self._complete_dungeon()
-        elif boss_id in ("daemon_prince_xerathul_p1", "daemon_prince_xerathul_p2"):
-            # Final boss done
+                self.party.set_flag(FLAG_FINAL_DONE)
+                self._show_story_sequence(loader.story()["ending_choice"], STATE_ENDING)
+        elif boss_id == "ghazghkull_p2":
             self.party.set_flag(FLAG_FINAL_DONE)
+            if "ghazghkull_banner" in self.item_db:
+                self.party.add_item("ghazghkull_banner")
             self._show_story_sequence(loader.story()["ending_choice"], STATE_ENDING)
-        elif boss_id == "autarch_sylandris":
-            self.party.set_flag(FLAG_VOID_CLEAR)
-            drop = self.item_db.get("autarch_scorpion_sword")
-            if drop:
-                self.party.add_item("autarch_scorpion_sword")
+        elif boss_id == "warboss_skullkrumpa":
+            self.party.set_flag(FLAG_ROK_CLEAR)
+            if "skullkrumpa_klaw" in self.item_db:
+                self.party.add_item("skullkrumpa_klaw")
             self._complete_dungeon()
         else:
             self._check_levelups_after_battle()
