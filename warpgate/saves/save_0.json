@@ -1,0 +1,182 @@
+{
+  "members": [
+    {
+      "name": "URIEL",
+      "class_id": 0,
+      "level": 1,
+      "xp": 0,
+      "promoted": false,
+      "hp": 45,
+      "max_hp": 45,
+      "base_str": 18,
+      "base_def": 16,
+      "base_agi": 6,
+      "base_faith": 5,
+      "base_psy": 2,
+      "base_hit": 84,
+      "base_eva": 5,
+      "base_mrst": 8,
+      "warp_max": 0,
+      "warp": 0,
+      "faith_max": 0,
+      "faith_pts": 0,
+      "equipment": {
+        "HELM": null,
+        "BODY": "carapace_armour",
+        "MAIN": "bolt_pistol_mkiii",
+        "OFF": null,
+        "RELIC": null
+      },
+      "known_powers": [
+        "bolter_volley",
+        "chainsword_assault",
+        "iron_halo_ability"
+      ],
+      "corruption": 0
+    },
+    {
+      "name": "HAVELOCK",
+      "class_id": 1,
+      "level": 1,
+      "xp": 0,
+      "promoted": false,
+      "hp": 32,
+      "max_hp": 32,
+      "base_str": 12,
+      "base_def": 10,
+      "base_agi": 10,
+      "base_faith": 14,
+      "base_psy": 10,
+      "base_hit": 84,
+      "base_eva": 10,
+      "base_mrst": 12,
+      "warp_max": 4,
+      "warp": 4,
+      "faith_max": 0,
+      "faith_pts": 0,
+      "equipment": {
+        "HELM": null,
+        "BODY": "flak_armour",
+        "MAIN": "bolt_pistol_mkiii",
+        "OFF": null,
+        "RELIC": null
+      },
+      "known_powers": [
+        "purge_heretic",
+        "inq_authority",
+        "psychic_interrogation",
+        "rosette_enforcement",
+        "wounding",
+        "flame_breath",
+        "dominate",
+        "kinetic_strike"
+      ],
+      "corruption": 0
+    },
+    {
+      "name": "ZARAPHEL",
+      "class_id": 2,
+      "level": 1,
+      "xp": 0,
+      "promoted": false,
+      "hp": 22,
+      "max_hp": 22,
+      "base_str": 6,
+      "base_def": 6,
+      "base_agi": 12,
+      "base_faith": 8,
+      "base_psy": 20,
+      "base_hit": 84,
+      "base_eva": 12,
+      "base_mrst": 6,
+      "warp_max": 10,
+      "warp": 10,
+      "faith_max": 0,
+      "faith_pts": 0,
+      "equipment": {
+        "HELM": null,
+        "BODY": "psyker_robes",
+        "MAIN": "force_staff",
+        "OFF": null,
+        "RELIC": null
+      },
+      "known_powers": [
+        "wounding",
+        "flame_breath",
+        "dominate",
+        "kinetic_strike"
+      ],
+      "corruption": 0
+    },
+    {
+      "name": "GAUNT",
+      "class_id": 3,
+      "level": 1,
+      "xp": 0,
+      "promoted": false,
+      "hp": 30,
+      "max_hp": 30,
+      "base_str": 10,
+      "base_def": 12,
+      "base_agi": 9,
+      "base_faith": 20,
+      "base_psy": 6,
+      "base_hit": 84,
+      "base_eva": 9,
+      "base_mrst": 14,
+      "warp_max": 0,
+      "warp": 0,
+      "faith_max": 10,
+      "faith_pts": 10,
+      "equipment": {
+        "HELM": null,
+        "BODY": "flak_armour",
+        "MAIN": "laspistol_kantrael",
+        "OFF": null,
+        "RELIC": null
+      },
+      "known_powers": [
+        "emperors_grace",
+        "litany_protection",
+        "smite_unclean",
+        "cure_affliction"
+      ],
+      "corruption": 0
+    }
+  ],
+  "inventory": {
+    "stimm_injector": 5,
+    "frag_grenade": 2,
+    "antitox_shot": 2
+  },
+  "gelt": 200,
+  "corruption": 0,
+  "morale": 5,
+  "flags": {},
+  "location": "TEST LOCATION",
+  "world_x": 12,
+  "world_y": 22,
+  "playtime": 0,
+  "party_summary": [
+    {
+      "name": "URIEL",
+      "class": "ASTARTES",
+      "level": 1
+    },
+    {
+      "name": "HAVELOCK",
+      "class": "INQUISITOR",
+      "level": 1
+    },
+    {
+      "name": "ZARAPHEL",
+      "class": "PSYKER",
+      "level": 1
+    },
+    {
+      "name": "GAUNT",
+      "class": "SISTER",
+      "level": 1
+    }
+  ]
+}
