@@ -14,13 +14,13 @@ def load(filename):
     return _CACHE[filename]
 
 def enemies():
-    return load("enemies.json")
+    return load("config/enemies.json")
 
 def items():
-    return load("items.json")
+    return load("config/items.json")
 
 def spells():
-    return load("spells.json")
+    return load("config/spells.json")
 
 def story():
-    return load("story.json")
+    return load("config/story.json")

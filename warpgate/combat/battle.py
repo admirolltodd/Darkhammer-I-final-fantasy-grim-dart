@@ -132,7 +132,7 @@ class Battle:
             self._on_enemy_death(target)
 
     def do_use_power(self, caster, power_data, targets):
-        import assets.data.spells_data as sd
+        import assets.data.config.spells_data as sd
         sp = power_data
         effect = sp.get("effect")
         res    = sp.get("resource", RES_NONE)

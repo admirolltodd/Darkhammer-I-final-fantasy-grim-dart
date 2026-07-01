@@ -72,7 +72,7 @@ class Character:
         self._miraculous_trigger = False
 
     def _init_powers(self):
-        from assets.data import spells_data
+        from assets.data.config import spells_data
         for sp in spells_data.STARTING_POWERS.get(self.class_id, []):
             self.known_powers.append(sp)
 
@@ -247,7 +247,7 @@ class Character:
         self._check_power_unlock()
 
     def _check_power_unlock(self):
-        from assets.data import spells_data
+        from assets.data.config import spells_data
         unlocks = spells_data.LEVEL_UNLOCKS.get(self.class_id, {})
         for lvl, power_id in unlocks.items():
             if self.level >= lvl and power_id not in self.known_powers:

@@ -849,7 +849,7 @@ class Game:
             bm["sub"] = False
 
     def _get_power(self, power_id):
-        import assets.data.spells_data as sd
+        import assets.data.config.spells_data as sd
         return sd.SPELLS.get(power_id)
 
     def _res_symbol(self, res):

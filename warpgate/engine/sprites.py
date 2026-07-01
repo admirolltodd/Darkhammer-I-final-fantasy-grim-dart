@@ -54,19 +54,19 @@ class SpriteAssets:
     def world_tile(self, tile_id, dest=32):
         if self._world_tiles_spec is None:
             self._world_tiles_spec = {
-                "WASTELAND":  ("dirt.png", 0, 160),
-                "ASH":        ("dirt.png", 32, 160),
-                "RUIN_FLOOR": ("dirt.png", 64, 160),
-                "RUBBLE":     ("castlefloors.png", 192, 224),
-                "ROAD":       ("castlewalls.png", 0, 192),
-                "TOXIC_SEA":  ("lava.png", 0, 160),
-                "DUNGEON":    ("dungeon.png", 0, 0),
-                "WALL":       ("dungeon.png", 0, 0),
-                "TOWN":       ("castlefloors.png", 64, 192),
-                "BRIDGE":     ("bridges.png", 32, 0),
-                "SHRINE":     ("castlefloors.png", 0, 0),
-                "DOOR":       ("dungeon.png", 0, 128),
-                "CHEST":      ("chests.png", 0, 0),
+                "WASTELAND":  ("terrain/dirt.png", 0, 160),
+                "ASH":        ("terrain/dirt.png", 32, 160),
+                "RUIN_FLOOR": ("terrain/dirt.png", 64, 160),
+                "RUBBLE":     ("environments/castlefloors.png", 192, 224),
+                "ROAD":       ("environments/castlewalls.png", 0, 192),
+                "TOXIC_SEA":  ("terrain/lava.png", 0, 160),
+                "DUNGEON":    ("environments/dungeon.png", 0, 0),
+                "WALL":       ("environments/dungeon.png", 0, 0),
+                "TOWN":       ("environments/castlefloors.png", 64, 192),
+                "BRIDGE":     ("terrain/bridges.png", 32, 0),
+                "SHRINE":     ("environments/castlefloors.png", 0, 0),
+                "DOOR":       ("environments/dungeon.png", 0, 128),
+                "CHEST":      ("decorations/chests.png", 0, 0),
             }
         spec = self._world_tiles_spec.get(tile_id)
         if not spec:
@@ -78,7 +78,7 @@ class SpriteAssets:
         return self._tile_cache[key]
 
     # ── Player/NPC overworld sprite: single idle "facing down" LPC frame ──
-    def character_frame(self, sheet_name="soldier.png", dest=32):
+    def character_frame(self, sheet_name="characters/npcs/soldier.png", dest=32):
         key = (sheet_name, dest)
         if key not in self._char_cache:
             sheet = self._sheet(sheet_name)
@@ -102,12 +102,12 @@ class SpriteAssets:
             return None
         if self._monster_map is None:
             self._monster_map = {
-                "ork_flying":  "bee.png",
-                "ork_mounted": "snake.png",
-                "ork_psyker":  "eyeball.png",
-                "small_ork":   "small_worm.png",
-                "beast_large": "big_worm.png",
-                "beast":       "snake.png",
+                "ork_flying":  "enemies/bee.png",
+                "ork_mounted": "enemies/snake.png",
+                "ork_psyker":  "enemies/eyeball.png",
+                "small_ork":   "enemies/small_worm.png",
+                "beast_large": "enemies/big_worm.png",
+                "beast":       "enemies/snake.png",
             }
         fname = None
         for key, fn in self._monster_map.items():
