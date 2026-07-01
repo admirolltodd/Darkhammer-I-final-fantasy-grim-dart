@@ -1,14 +1,17 @@
+import os
 import pygame
 import math
 import random
 from constants import *
-from engine.sprites import SpriteAssets
+from engine.sprites import SpriteAssets, PIXEL_FONT_PATH, TITLE_FONT_PATH
 
 TILE_ID_NAMES = {
-    T_WASTELAND: "WASTELAND", T_ASH: "ASH", T_RUBBLE: "RUBBLE", T_ROAD: "ROAD",
-    T_TOXIC_SEA: "TOXIC_SEA", T_RUIN_FLOOR: "RUIN_FLOOR", T_DUNGEON: "DUNGEON",
-    T_TOWN: "TOWN", T_WALL: "WALL", T_DOOR: "DOOR", T_CHEST: "CHEST",
-    T_SHRINE: "SHRINE", T_BRIDGE: "BRIDGE",
+    T_WASTELAND: "WASTELAND", T_ASH: "ASH",        T_RUBBLE: "RUBBLE",
+    T_ROAD: "ROAD",           T_TOXIC_SEA: "TOXIC_SEA", T_RUIN_FLOOR: "RUIN_FLOOR",
+    T_DUNGEON: "DUNGEON",     T_TOWN: "TOWN",       T_WALL: "WALL",
+    T_DOOR: "DOOR",           T_CHEST: "CHEST",     T_SHRINE: "SHRINE",
+    T_BRIDGE: "BRIDGE",       T_GRASS: "GRASS",     T_WATER: "WATER",
+    T_ROCK: "ROCK",           T_CEMENT: "CEMENT",   T_STAIRS: "STAIRS",
 }
 
 class Renderer:
@@ -24,8 +27,32 @@ class Renderer:
 
     def get_font(self):
         if self._font is None:
-            self._font = pygame.font.SysFont("monospace", FONT_SIZE, bold=True)
+            try:
+                self._font = pygame.font.Font(PIXEL_FONT_PATH, FONT_SIZE)
+            except (FileNotFoundError, pygame.error):
+                self._font = pygame.font.SysFont("monospace", FONT_SIZE, bold=True)
         return self._font
+
+    def get_title_font(self, size=24):
+        key = ("title", size)
+        if not hasattr(self, "_title_fonts"):
+            self._title_fonts = {}
+        if key not in self._title_fonts:
+            try:
+                self._title_fonts[key] = pygame.font.Font(TITLE_FONT_PATH, size)
+            except (FileNotFoundError, pygame.error):
+                self._title_fonts[key] = pygame.font.SysFont("serif", size, bold=True)
+        return self._title_fonts[key]
+
+    def draw_title_text(self, text, x, y, color=UI_HIGHLIGHT, size=24, shadow=True):
+        f = self.get_title_font(size)
+        t = str(text).upper()
+        if shadow:
+            s = f.render(t, True, UI_SHADOW)
+            self.surface.blit(s, (x + 1, y + 2))
+        img = f.render(t, True, color)
+        self.surface.blit(img, (x, y))
+        return img.get_width()
 
     def shake(self, frames=4, magnitude=3):
         self._shake_frames = frames
@@ -66,17 +93,21 @@ class Renderer:
         self.surface.blit(img, (x, y))
         return img.get_width()
 
-    def draw_box(self, x, y, w, h, bg=UI_BG, border=UI_BORDER, title=None):
-        # Interior fill
-        pygame.draw.rect(self.surface, bg, (x, y, w, h))
-        # Top-edge inner highlight strip (subtle lighting from above)
+    def draw_box(self, x, y, w, h, bg=UI_BG, border=UI_BORDER, title=None, texture=None):
+        # Interior — try textured paper background first, fall back to solid fill
+        tex = self.assets.gui_bg_patch(texture or "paper", w, h)
+        if tex:
+            self.surface.blit(tex, (x, y))
+        else:
+            pygame.draw.rect(self.surface, bg, (x, y, w, h))
+        # Top-edge inner highlight strip
         hl = tuple(min(255, c + 14) for c in bg)
         pygame.draw.rect(self.surface, hl, (x + 4, y + 4, w - 8, 2))
         # Bottom-edge inner shadow strip
         sh = tuple(max(0, c - 8) for c in bg)
         pygame.draw.rect(self.surface, sh, (x + 4, y + h - 6, w - 8, 2))
 
-        # 3-layer border: dark outer → gold band → dark inner (classic SNES bevel)
+        # 3-layer border: dark outer → gold band → dark inner
         outer = tuple(max(0, c // 4) for c in border)
         pygame.draw.rect(self.surface, outer,  (x,   y,   w,   h  ), 1)
         pygame.draw.rect(self.surface, border, (x+1, y+1, w-2, h-2), 2)
@@ -118,35 +149,41 @@ class Renderer:
         self.surface.fill(C_BLACK)
         self.draw_scrolling_stars(0.2)
 
-        # Warpgate title
-        title1 = "WARPGATE"
-        title2 = "CHRONICLES OF THE 41ST MILLENNIUM"
-        x1 = (INTERNAL_W - len(title1) * FONT_SIZE) // 2
-        x2 = (INTERNAL_W - len(title2) * FONT_SIZE) // 2
-
-        # Animated warp glow
+        # Animated warp glow for the main logo
         phase = math.sin(game_ticks * 0.05) * 0.5 + 0.5
         glow_c = (int(100 + 80*phase), int(20 + 10*phase), int(140 + 40*phase))
 
-        self.draw_text(title1, x1-1, 48, glow_c, shadow=False)
-        self.draw_text(title1, x1,   47, C_GOLD)
-        self.draw_text(title2, x2, 62, C_MID_GREY)
+        # Large Duvall title
+        t1w = self.draw_title_text("WARPGATE", 0, 38, glow_c, size=28, shadow=False)
+        t1w = self.draw_title_text("WARPGATE", 0, 36, C_GOLD, size=28, shadow=True)
+        # Centre it now we know the width
+        self.surface.fill(C_BLACK, (0, 32, INTERNAL_W, 36))
+        self.draw_scrolling_stars(0)  # redraw stars only in dirty rect area — skip, stars already drawn
+        cx = (INTERNAL_W - t1w) // 2
+        self.draw_title_text("WARPGATE", cx + 1, 38, glow_c, size=28, shadow=False)
+        self.draw_title_text("WARPGATE", cx,     36, C_GOLD,  size=28, shadow=True)
 
-        # Aquila symbol (drawn with pixels)
-        ax, ay = INTERNAL_W//2 - 8, 85
-        for px, py in [(0,2),(1,1),(2,0),(3,1),(3,2),(2,3),(4,3),(5,3),
-                       (5,2),(6,1),(7,0),(8,1),(8,2),(7,3),(3,4),(4,4),(4,5)]:
-            pygame.draw.rect(self.surface, C_GOLD, (ax+px, ay+py, 1, 1))
+        sub = "BATTLE FOR ARMAGEDDON"
+        sw = self.draw_title_text(sub, 0, 66, C_MID_GREY, size=12, shadow=False)
+        self.surface.fill(C_BLACK, (0, 62, INTERNAL_W, 18))
+        scx = (INTERNAL_W - sw) // 2
+        self.draw_title_text(sub, scx, 66, C_MID_GREY, size=12, shadow=True)
 
-        self.draw_text("IN THE GRIM DARKNESS OF THE FAR FUTURE,", 10, 108, C_DARK_RED)
-        self.draw_text("THERE IS ONLY WAR.", 60, 116, C_DARK_RED)
+        # Aquila symbol (pixel art)
+        ax, ay = INTERNAL_W // 2 - 8, 88
+        for ppx, ppy in [(0,2),(1,1),(2,0),(3,1),(3,2),(2,3),(4,3),(5,3),
+                         (5,2),(6,1),(7,0),(8,1),(8,2),(7,3),(3,4),(4,4),(4,5)]:
+            pygame.draw.rect(self.surface, C_GOLD, (ax + ppx, ay + ppy, 1, 1))
+
+        self.draw_text("IN THE GRIM DARKNESS OF THE FAR FUTURE,", 10, 110, C_DARK_RED)
+        self.draw_text("THERE IS ONLY WAR.", 60, 120, C_DARK_RED)
 
         if blink_on:
             msg = "PRESS ENTER TO SERVE THE EMPEROR"
             mx = (INTERNAL_W - len(msg) * FONT_SIZE) // 2
-            self.draw_text(msg, mx, 148, C_GOLD)
+            self.draw_text(msg, mx, 152, C_GOLD)
 
-        self.draw_text("V1.0  ---  IMPERIUM OF MAN", 52, 210, C_MID_GREY)
+        self.draw_text("V1.0  ---  IMPERIUM OF MAN", 52, 212, C_MID_GREY)
 
     def render_class_select(self, class_defs, selected_slots, current_slot, cursor_class, scroll_tick):
         self.surface.fill(C_BLACK)
@@ -196,11 +233,17 @@ class Renderer:
             T_WALL:       (40, 35, 30),
             T_BRIDGE:     (65, 60, 55),
             T_SHRINE:     (80, 70, 20),
+            T_GRASS:      (25, 55, 20),
+            T_WATER:      (15, 35, 75),
+            T_ROCK:       (55, 50, 48),
+            T_CEMENT:     (65, 62, 60),
+            T_STAIRS:     (70, 60, 40),
         }
         TILE_MARKS = {
             T_TOWN:    ("T", C_GOLD),
             T_DUNGEON: ("D", C_RED),
             T_SHRINE:  ("+", C_YELLOW),
+            T_STAIRS:  ("S", C_LIGHT_GREY),
         }
 
         for ty in range(tiles_y):
@@ -228,11 +271,16 @@ class Renderer:
                     ch, mc = TILE_MARKS[tile_id]
                     self.draw_text(ch, px + TILE//4, py + TILE//4, mc, shadow=False)
 
-        # Party sprite
+        # Party sprite — animated walk cycle
         px = (party.world_x - cam_x) * TILE
         py = (party.world_y - cam_y) * TILE
         blink = (anim_tick // 15) % 2
-        party_sprite = self.assets.character_frame()
+        party_sprite = self.assets.walk_frame(
+            facing=getattr(party, "facing", "down"),
+            anim_tick=anim_tick,
+            dest=TILE,
+            moving=getattr(party, "moving", False),
+        )
         if party_sprite:
             self.surface.blit(party_sprite, (px, py))
         else:
@@ -393,10 +441,17 @@ class Renderer:
         c  = enemy.color
         st = enemy.sprite_type
 
-        img = self.assets.monster_sprite(st)
-        if img:
-            self.surface.blit(img, (x, y))
-            return
+        # Try boss sprite first (explicit map, larger dest)
+        if "boss" in st:
+            img = self.assets.boss_sprite(st, dest=48)
+            if img:
+                self.surface.blit(img, (x - 6, y - 6))
+                return
+        else:
+            img = self.assets.monster_sprite(st)
+            if img:
+                self.surface.blit(img, (x, y))
+                return
 
         if "boss" in st:
             # Large boss sprite
@@ -498,14 +553,18 @@ class Renderer:
 
     def render_dialogue(self, npc_name, portrait_id, text, page, total_pages, blink):
         bx, by, bw, bh = 0, INTERNAL_H - 56, INTERNAL_W, 56
-        self.draw_box(bx, by, bw, bh)
+        self.draw_box(bx, by, bw, bh, texture="wood")
 
-        # Portrait area
-        pygame.draw.rect(self.surface, C_DARK_GREY, (bx + 2, by + 2, 40, 40))
-        self.draw_text(portrait_id[:2], bx + 14, by + 17, C_GOLD)
+        # Portrait — try sprite, fall back to initials placeholder
+        portrait = self.assets.npc_portrait(portrait_id, dest=40)
+        if portrait:
+            self.surface.blit(portrait, (bx + 2, by + 2))
+        else:
+            pygame.draw.rect(self.surface, C_DARK_GREY, (bx + 2, by + 2, 40, 40))
+            self.draw_text(portrait_id[:2], bx + 14, by + 17, C_GOLD)
 
-        # Name
-        self.draw_text(npc_name, bx + 46, by + 4, C_GOLD)
+        # Name (drawn with Duvall at slightly larger size)
+        self.draw_title_text(npc_name, bx + 46, by + 2, C_GOLD, size=10)
 
         # Text (wrap at 28 chars)
         lines = self._wrap_text(text, 26)
@@ -694,17 +753,23 @@ class Renderer:
         cam_x = party.world_x - INTERNAL_W // (TILE * 2)
         cam_y = party.world_y - INTERNAL_H // (TILE * 2)
 
+        # Choose tileset based on dungeon zone
+        iron_fortress = getattr(dungeon, "zone", "") == "iron_fortress"
+
         DTILE_COLORS = {
             T_WALL:       (25, 20, 20),
             T_RUIN_FLOOR: (35, 30, 28),
             T_DOOR:       (60, 45, 20),
             T_CHEST:      (80, 65, 15),
             T_SHRINE:     (70, 60, 15),
+            T_CEMENT:     (50, 50, 55),
+            T_STAIRS:     (60, 55, 40),
         }
         DTILE_MARKS = {
             T_DOOR:   ("D", C_RUST),
             T_CHEST:  ("C", C_GOLD),
             T_SHRINE: ("+", C_YELLOW),
+            T_STAIRS: ("^", C_LIGHT_GREY),
         }
 
         for ty in range(INTERNAL_H // TILE + 2):
@@ -714,18 +779,48 @@ class Renderer:
                 px = tx * TILE
                 py = ty * TILE
                 tile_id = dungeon.get_tile(wx, wy)
-                sprite = self.assets.world_tile(TILE_ID_NAMES.get(tile_id))
+
+                # Zone-specific tileset lookup
+                sprite = None
+                if iron_fortress:
+                    if tile_id == T_RUIN_FLOOR or tile_id == T_DUNGEON:
+                        sprite = self.assets.space_block_tile(
+                            SpriteAssets.SBLOCK_FLOOR_COL, SpriteAssets.SBLOCK_FLOOR_ROW, TILE)
+                    elif tile_id == T_WALL:
+                        sprite = self.assets.space_block_tile(
+                            SpriteAssets.SBLOCK_WALL_COL, SpriteAssets.SBLOCK_WALL_ROW, TILE)
+                    elif tile_id == T_DOOR:
+                        sprite = self.assets.space_block_tile(
+                            SpriteAssets.SBLOCK_DOOR_COL, SpriteAssets.SBLOCK_DOOR_ROW, TILE)
+                else:
+                    if tile_id == T_RUIN_FLOOR or tile_id == T_DUNGEON:
+                        sprite = self.assets.dungeon_tile(
+                            SpriteAssets.DTILE_FLOOR_COL, SpriteAssets.DTILE_FLOOR_ROW, TILE)
+                    elif tile_id == T_WALL:
+                        sprite = self.assets.dungeon_tile(
+                            SpriteAssets.DTILE_WALL_COL, SpriteAssets.DTILE_WALL_ROW, TILE)
+                    elif tile_id == T_DOOR:
+                        sprite = self.assets.dungeon_tile(
+                            SpriteAssets.DTILE_DOOR_COL, SpriteAssets.DTILE_DOOR_ROW, TILE)
+                    elif tile_id == T_CHEST:
+                        sprite = self.assets.dungeon_tile(
+                            SpriteAssets.DTILE_CHEST_COL, SpriteAssets.DTILE_CHEST_ROW, TILE)
+                    elif tile_id == T_STAIRS:
+                        sprite = self.assets.dungeon_tile(
+                            SpriteAssets.DTILE_STAIR_COL, SpriteAssets.DTILE_STAIR_ROW, TILE)
+
+                # Fall back to world_tile then solid colour
+                if sprite is None:
+                    sprite = self.assets.world_tile(TILE_ID_NAMES.get(tile_id))
+
                 if sprite:
                     self.surface.blit(sprite, (px, py))
                 elif tile_id == T_WALL:
                     pygame.draw.rect(self.surface, (25, 20, 20), (px, py, TILE, TILE))
                     pygame.draw.rect(self.surface, (35, 30, 28), (px, py, TILE, 2))
                 elif tile_id == T_RUIN_FLOOR:
-                    color = (35, 30, 28)
-                    # Subtle variation
-                    v = ((wx * 13 + wy * 7) % 5)
-                    color = (35+v, 30+v, 28+v)
-                    pygame.draw.rect(self.surface, color, (px, py, TILE, TILE))
+                    v = (wx * 13 + wy * 7) % 5
+                    pygame.draw.rect(self.surface, (35+v, 30+v, 28+v), (px, py, TILE, TILE))
                     pygame.draw.rect(self.surface, (20, 15, 15), (px, py, TILE, 1))
                 else:
                     color = DTILE_COLORS.get(tile_id, (20, 15, 15))
@@ -734,11 +829,16 @@ class Renderer:
                     ch, mc = DTILE_MARKS[tile_id]
                     self.draw_text(ch, px + TILE//4, py + TILE//4, mc, shadow=False)
 
-        # Party
+        # Party — animated walk cycle
         px2 = (party.world_x - cam_x) * TILE
         py2 = (party.world_y - cam_y) * TILE
         blink = (anim_tick // 20) % 2
-        party_sprite = self.assets.character_frame()
+        party_sprite = self.assets.walk_frame(
+            facing=getattr(party, "facing", "down"),
+            anim_tick=anim_tick,
+            dest=TILE,
+            moving=getattr(party, "moving", False),
+        )
         if party_sprite:
             self.surface.blit(party_sprite, (px2, py2))
         else:
@@ -813,7 +913,7 @@ class Renderer:
                     self.draw_text("+", px + TILE//4, py + TILE//4, C_GOLD, shadow=False)
 
         # NPCs
-        npc_sprite = self.assets.character_frame("soldier_altcolor.png")
+        npc_sprite = self.assets.character_frame("characters/npcs/soldier_altcolor.png")
         for npc in town.npcs:
             nx = (npc.x - cam_x) * TILE
             ny = (npc.y - cam_y) * TILE
@@ -825,10 +925,15 @@ class Renderer:
                     pygame.draw.rect(self.surface, C_BONE, (nx+5, ny+3, 6, 6))
                 self.draw_text(npc.name[:4], nx, ny + TILE - 8, C_MID_GREY, shadow=False)
 
-        # Party
+        # Party — animated walk cycle
         px2 = (party.world_x - cam_x) * TILE
         py2 = (party.world_y - cam_y) * TILE
-        party_sprite = self.assets.character_frame()
+        party_sprite = self.assets.walk_frame(
+            facing=getattr(party, "facing", "down"),
+            anim_tick=anim_tick,
+            dest=TILE,
+            moving=getattr(party, "moving", False),
+        )
         if party_sprite:
             self.surface.blit(party_sprite, (px2, py2))
         else:

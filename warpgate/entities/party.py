@@ -12,6 +12,8 @@ class Party:
         self.world_x   = 5
         self.world_y   = 5
         self.playtime  = 0
+        self.facing    = "down"
+        self.moving    = False
 
     def add_member(self, character):
         if len(self.members) < MAX_PARTY:

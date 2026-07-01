@@ -75,8 +75,13 @@ T_DOOR       = 9
 T_CHEST      = 10
 T_SHRINE     = 11
 T_BRIDGE     = 12
+T_GRASS      = 13
+T_WATER      = 14
+T_ROCK       = 15
+T_CEMENT     = 16
+T_STAIRS     = 17
 
-IMPASSABLE_TILES = {T_TOXIC_SEA, T_RUBBLE, T_WALL}
+IMPASSABLE_TILES = {T_TOXIC_SEA, T_RUBBLE, T_WALL, T_WATER, T_ROCK}
 
 ENCOUNTER_RATES = {
     T_WASTELAND: 12,
@@ -84,6 +89,8 @@ ENCOUNTER_RATES = {
     T_ROAD:       0,
     T_RUIN_FLOOR: 4,
     T_DUNGEON:    4,
+    T_GRASS:      8,
+    T_CEMENT:     6,
 }
 
 # ── Directions ────────────────────────────────────────────────────────────────

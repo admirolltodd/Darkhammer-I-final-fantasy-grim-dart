@@ -24,22 +24,33 @@ def build_world():
             if x < 2 or x >= WORLD_W - 2 or y < 2 or y >= WORLD_H - 2:
                 w.set_tile(x, y, T_TOXIC_SEA)
             elif 18 <= x <= 24 and 20 <= y <= 30:
-                # Fungal cave region — ash and rubble
-                if random.random() < 0.15:
+                # Fungal cave region — ash, rubble, and patches of strange growth
+                r = random.random()
+                if r < 0.15:
                     w.set_tile(x, y, T_RUBBLE)
+                elif r < 0.25:
+                    w.set_tile(x, y, T_GRASS)
                 else:
                     w.set_tile(x, y, T_ASH)
             elif x > 40 or y > 40:
-                # Deep ash wastes toward Iron Fortress
-                if random.random() < 0.25:
+                # Deep ash wastes toward Iron Fortress — rockier, more cement ruins
+                r = random.random()
+                if r < 0.18:
                     w.set_tile(x, y, T_RUBBLE)
+                elif r < 0.28:
+                    w.set_tile(x, y, T_ROCK)
+                elif r < 0.36:
+                    w.set_tile(x, y, T_CEMENT)
                 else:
                     w.set_tile(x, y, T_ASH)
             else:
-                if random.random() < 0.20:
+                r = random.random()
+                if r < 0.18:
                     w.set_tile(x, y, T_ASH)
-                elif random.random() < 0.08:
+                elif r < 0.26:
                     w.set_tile(x, y, T_RUBBLE)
+                elif r < 0.30:
+                    w.set_tile(x, y, T_ROCK)
                 else:
                     w.set_tile(x, y, T_WASTELAND)
 

@@ -197,6 +197,8 @@ class Game:
             self.clock.tick(FPS)
 
     def _update(self):
+        # Reset per-frame movement flag so walk animation idles when standing still
+        self.party.moving = False
         s = self.state
         if s == STATE_TITLE:        self._update_title()
         elif s == STATE_CLASS_SELECT: self._update_class_select()
@@ -378,17 +380,22 @@ class Game:
     def _update_world(self):
         moved = False
         dx, dy = 0, 0
-        if self.input.pressed("up"):    dy = -1
+        if self.input.pressed("up"):     dy = -1
         elif self.input.pressed("down"): dy =  1
         elif self.input.pressed("left"): dx = -1
         elif self.input.pressed("right"):dx =  1
 
         if dx or dy:
+            if dx ==  1: self.party.facing = "right"
+            elif dx == -1: self.party.facing = "left"
+            elif dy == -1: self.party.facing = "up"
+            else:          self.party.facing = "down"
             nx = self.party.world_x + dx
             ny = self.party.world_y + dy
             if self.world.is_passable(nx, ny):
                 self.party.world_x = nx
                 self.party.world_y = ny
+                self.party.moving = True
                 self.world.mark_visited(nx, ny)
                 moved = True
                 self.steps_since_encounter += 1
@@ -494,17 +501,22 @@ class Game:
 
     def _update_town(self):
         dx, dy = 0, 0
-        if self.input.pressed("up"):    dy = -1
+        if self.input.pressed("up"):     dy = -1
         elif self.input.pressed("down"): dy =  1
         elif self.input.pressed("left"): dx = -1
         elif self.input.pressed("right"):dx =  1
 
         if dx or dy:
+            if dx ==  1: self.party.facing = "right"
+            elif dx == -1: self.party.facing = "left"
+            elif dy == -1: self.party.facing = "up"
+            else:          self.party.facing = "down"
             nx = self.party.world_x + dx
             ny = self.party.world_y + dy
             if self.current_town.is_passable(nx, ny):
                 self.party.world_x = nx
                 self.party.world_y = ny
+                self.party.moving = True
 
         if self.input.pressed("confirm"):
             # Check NPC
@@ -543,17 +555,22 @@ class Game:
 
     def _update_dungeon(self):
         dx, dy = 0, 0
-        if self.input.pressed("up"):    dy = -1
+        if self.input.pressed("up"):     dy = -1
         elif self.input.pressed("down"): dy =  1
         elif self.input.pressed("left"): dx = -1
         elif self.input.pressed("right"):dx =  1
 
         if dx or dy:
+            if dx ==  1: self.party.facing = "right"
+            elif dx == -1: self.party.facing = "left"
+            elif dy == -1: self.party.facing = "up"
+            else:          self.party.facing = "down"
             nx = self.party.world_x + dx
             ny = self.party.world_y + dy
             if self.current_dungeon.is_passable(nx, ny):
                 self.party.world_x = nx
                 self.party.world_y = ny
+                self.party.moving = True
                 self.current_dungeon.mark_visited(nx, ny)
 
                 # Random encounter
