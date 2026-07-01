@@ -67,13 +67,29 @@ class Renderer:
         return img.get_width()
 
     def draw_box(self, x, y, w, h, bg=UI_BG, border=UI_BORDER, title=None):
-        pygame.draw.rect(self.surface, bg,     (x, y, w, h))
-        pygame.draw.rect(self.surface, border, (x, y, w, h), 1)
-        # Corner decorations
-        for cx, cy in [(x, y), (x+w-4, y), (x, y+h-4), (x+w-4, y+h-4)]:
-            pygame.draw.rect(self.surface, border, (cx, cy, 4, 4))
+        # Interior fill
+        pygame.draw.rect(self.surface, bg, (x, y, w, h))
+        # Top-edge inner highlight strip (subtle lighting from above)
+        hl = tuple(min(255, c + 14) for c in bg)
+        pygame.draw.rect(self.surface, hl, (x + 4, y + 4, w - 8, 2))
+        # Bottom-edge inner shadow strip
+        sh = tuple(max(0, c - 8) for c in bg)
+        pygame.draw.rect(self.surface, sh, (x + 4, y + h - 6, w - 8, 2))
+
+        # 3-layer border: dark outer → gold band → dark inner (classic SNES bevel)
+        outer = tuple(max(0, c // 4) for c in border)
+        pygame.draw.rect(self.surface, outer,  (x,   y,   w,   h  ), 1)
+        pygame.draw.rect(self.surface, border, (x+1, y+1, w-2, h-2), 2)
+        pygame.draw.rect(self.surface, outer,  (x+3, y+3, w-6, h-6), 1)
+
+        # Corner diamond ornaments
+        for cx, cy in [(x+1, y+1), (x+w-5, y+1), (x+1, y+h-5), (x+w-5, y+h-5)]:
+            pygame.draw.rect(self.surface, border, (cx+1, cy,   2, 4))
+            pygame.draw.rect(self.surface, border, (cx,   cy+1, 4, 2))
+
         if title:
-            self.draw_text(title, x + 4, y + 2, UI_HIGHLIGHT)
+            tw = self.draw_text(title, x + 6, y + 5, UI_HIGHLIGHT)
+            pygame.draw.line(self.surface, border, (x + 5, y + 14), (x + tw + 8, y + 14), 1)
 
     def draw_hp_bar(self, x, y, w, current, maximum, label=None):
         pct = max(0, current / max(1, maximum))
@@ -210,7 +226,7 @@ class Renderer:
                 # Grid mark for special tiles
                 if tile_id in TILE_MARKS:
                     ch, mc = TILE_MARKS[tile_id]
-                    self.draw_text(ch, px+4, py+4, mc, shadow=False)
+                    self.draw_text(ch, px + TILE//4, py + TILE//4, mc, shadow=False)
 
         # Party sprite
         px = (party.world_x - cam_x) * TILE
@@ -231,13 +247,81 @@ class Renderer:
         self.draw_text(f"GELT: {party.gelt}", 160, INTERNAL_H - 13, C_GOLD)
         self.draw_text(f"CORRUPT: {party.corruption}%", 208, INTERNAL_H - 13, UI_CORRUPT if party.corruption > 25 else C_MID_GREY)
 
+    def _draw_battle_background(self, anim_tick):
+        """Layered SNES-style battle backdrop: scorched warzone sky + perspective ground."""
+        BATTLE_H = INTERNAL_H - 60
+        HORIZON  = 55
+        VP       = INTERNAL_W // 2
+
+        # Sky: banded gradient, deep purple-black → ember-amber at horizon
+        sky_bands = [
+            (0,               HORIZON * 1 // 5, ( 6,  3, 14)),
+            (HORIZON * 1 // 5, HORIZON * 2 // 5, (10,  5, 18)),
+            (HORIZON * 2 // 5, HORIZON * 3 // 5, (18,  7, 16)),
+            (HORIZON * 3 // 5, HORIZON * 4 // 5, (28, 10, 12)),
+            (HORIZON * 4 // 5, HORIZON,           (42, 15,  8)),
+        ]
+        for y0, y1, c in sky_bands:
+            pygame.draw.rect(self.surface, c, (0, y0, INTERNAL_W, max(1, y1 - y0)))
+
+        # Ground: scorched plain below horizon
+        ground_bands = [
+            (HORIZON,      HORIZON + 25, (22, 14, 10)),
+            (HORIZON + 25, HORIZON + 60, (17, 11,  8)),
+            (HORIZON + 60, BATTLE_H,     (12,  8,  6)),
+        ]
+        for y0, y1, c in ground_bands:
+            pygame.draw.rect(self.surface, c, (0, y0, INTERNAL_W, max(1, y1 - y0)))
+
+        # Horizon fire-glow (pulsing)
+        phase = math.sin(anim_tick * 0.04) * 0.5 + 0.5
+        for dy in range(-4, 7):
+            t  = 1.0 - abs(dy) / 6.0
+            gr = int((90 + 50 * phase) * t)
+            gg = int((25 +  8 * phase) * t)
+            pygame.draw.line(self.surface, (gr, gg, 5),
+                             (0, HORIZON + dy), (INTERNAL_W, HORIZON + dy))
+
+        # Ruined building silhouettes on the horizon
+        ruins = [
+            ( 8, HORIZON - 20, 14, 20),
+            (50, HORIZON - 14, 18, 14),
+            (95, HORIZON - 25, 12, 25),
+            (145, HORIZON - 18, 16, 18),
+            (185, HORIZON - 11, 20, 11),
+            (225, HORIZON - 22, 13, 22),
+        ]
+        for rx, ry, rw, rh in ruins:
+            pygame.draw.rect(self.surface, (5, 3, 3), (rx, ry, rw, rh))
+            if rh > 14:
+                for wx in range(rx + 2, rx + rw - 2, 5):
+                    pygame.draw.rect(self.surface, (14, 7, 4), (wx, ry + 4, 2, 3))
+            for cx in range(rx, rx + rw, 4):
+                if (cx // 4) % 2 == 0:
+                    pygame.draw.rect(self.surface, (5, 3, 3), (cx, ry - 3, 3, 3))
+
+        # Perspective grid: lines converge to vanishing point, horizontal rows compress
+        grid_c = (30, 20, 14)
+        for gx in range(0, INTERNAL_W + 1, 20):
+            pygame.draw.line(self.surface, grid_c, (VP, HORIZON), (gx, BATTLE_H), 1)
+        for i in range(1, 7):
+            t  = (i / 6) ** 1.8
+            gy = HORIZON + int(t * (BATTLE_H - HORIZON))
+            pygame.draw.line(self.surface, grid_c, (0, gy), (INTERNAL_W, gy))
+
+        # Animated smoke columns rising from burning ruins
+        for si, sx in enumerate([30, 120, 200]):
+            for p in range(5):
+                drift = int(math.sin((anim_tick * 0.06) + si * 1.3 + p * 0.7) * 4)
+                sy = HORIZON - 10 - p * 7
+                if sy < 0:
+                    break
+                br = 22 + p * 4
+                pygame.draw.rect(self.surface, (br, br - 4, br - 7),
+                                 (sx + drift, sy, 4, 6))
+
     def render_battle(self, battle, menu_state, anim_tick, damage_floats=None):
-        self.surface.fill(C_BLACK)
-        # Background grid
-        for x in range(0, INTERNAL_W, 32):
-            pygame.draw.line(self.surface, (15, 10, 15), (x, 0), (x, INTERNAL_H - 56), 1)
-        for y in range(0, INTERNAL_H - 56, 32):
-            pygame.draw.line(self.surface, (15, 10, 15), (0, y), (INTERNAL_W, y), 1)
+        self._draw_battle_background(anim_tick)
 
         alive_e = battle.alive_enemies()
         alive_p = battle.alive_party()
@@ -648,7 +732,7 @@ class Renderer:
                     pygame.draw.rect(self.surface, color, (px, py, TILE, TILE))
                 if tile_id in DTILE_MARKS:
                     ch, mc = DTILE_MARKS[tile_id]
-                    self.draw_text(ch, px+4, py+4, mc, shadow=False)
+                    self.draw_text(ch, px + TILE//4, py + TILE//4, mc, shadow=False)
 
         # Party
         px2 = (party.world_x - cam_x) * TILE
@@ -724,9 +808,9 @@ class Renderer:
                     color = TOWN_COLORS.get(tile_id, (20, 15, 12))
                     pygame.draw.rect(self.surface, color, (px, py, TILE, TILE))
                 if tile_id == T_DOOR:
-                    self.draw_text("D", px+4, py+4, C_RUST, shadow=False)
+                    self.draw_text("D", px + TILE//4, py + TILE//4, C_RUST, shadow=False)
                 elif tile_id == T_SHRINE:
-                    self.draw_text("+", px+4, py+4, C_GOLD, shadow=False)
+                    self.draw_text("+", px + TILE//4, py + TILE//4, C_GOLD, shadow=False)
 
         # NPCs
         npc_sprite = self.assets.character_frame("soldier_altcolor.png")
@@ -739,7 +823,7 @@ class Renderer:
                 else:
                     pygame.draw.rect(self.surface, npc.color, (nx+3, ny+3, 10, 12))
                     pygame.draw.rect(self.surface, C_BONE, (nx+5, ny+3, 6, 6))
-                self.draw_text(npc.name[:4], nx, ny+16, C_MID_GREY, shadow=False)
+                self.draw_text(npc.name[:4], nx, ny + TILE - 8, C_MID_GREY, shadow=False)
 
         # Party
         px2 = (party.world_x - cam_x) * TILE

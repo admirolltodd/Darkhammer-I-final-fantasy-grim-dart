@@ -5,7 +5,7 @@ INTERNAL_W, INTERNAL_H = 256, 224
 SCALE = 3
 SCREEN_W, SCREEN_H = INTERNAL_W * SCALE, INTERNAL_H * SCALE
 FPS = 60
-TILE = 16
+TILE = 32
 
 # ── Palette ──────────────────────────────────────────────────────────────────
 C_BLACK      = (13,   2,   8)

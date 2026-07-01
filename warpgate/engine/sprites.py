@@ -51,7 +51,7 @@ class SpriteAssets:
         return crop
 
     # ── World/dungeon/town terrain tiles, scaled down from 32px LPC art ──
-    def world_tile(self, tile_id, dest=16):
+    def world_tile(self, tile_id, dest=32):
         if self._world_tiles_spec is None:
             self._world_tiles_spec = {
                 "WASTELAND":  ("dirt.png", 0, 160),
@@ -78,7 +78,7 @@ class SpriteAssets:
         return self._tile_cache[key]
 
     # ── Player/NPC overworld sprite: single idle "facing down" LPC frame ──
-    def character_frame(self, sheet_name="soldier.png", dest=16):
+    def character_frame(self, sheet_name="soldier.png", dest=32):
         key = (sheet_name, dest)
         if key not in self._char_cache:
             sheet = self._sheet(sheet_name)
