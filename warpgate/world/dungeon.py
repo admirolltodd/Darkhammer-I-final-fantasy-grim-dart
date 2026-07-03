@@ -77,9 +77,10 @@ class DungeonFloor(World):
             for x in range(self.width):
                 self.set_tile(x, y, T_WALL)
 
-        # Carve rooms
+        # Carve rooms — density scales with floor area so big floors sprawl
         rooms = []
-        for _ in range(12):
+        n_rooms = max(10, (self.width * self.height) // 80)
+        for _ in range(n_rooms):
             rx = random.randint(2, self.width - 10)
             ry = random.randint(2, self.height - 10)
             rw = random.randint(4, 9)

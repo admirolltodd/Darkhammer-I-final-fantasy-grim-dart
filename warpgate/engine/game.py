@@ -65,9 +65,11 @@ STATE_LEVEL_UP     = "LEVEL_UP"
 STATE_GAME_OVER    = "GAME_OVER"
 STATE_VICTORY      = "VICTORY"
 STATE_ENDING       = "ENDING"
+STATE_BATTLE_FADE  = "BATTLE_FADE"
 
 MAIN_MENU_OPTIONS = ["BATTLE RECORDS", "WAR GEAR", "PSYKER RITES", "SUPPLIES", "SAVE", "ABANDON HOPE"]
-BATTLE_MENU_TOP   = ["ENGAGE", "RITES / LITANIES", "WAR GEAR", "TACTICAL RETREAT"]
+# Menu options fit the 64px columns of the battle command bar (max 7 chars)
+BATTLE_MENU_TOP   = ["ENGAGE", "RITES", "GEAR", "RETREAT"]
 
 class Game:
     def __init__(self, screen):
@@ -127,6 +129,9 @@ class Game:
         self.battle_action_queue   = []
         self.battle_pending_action = None   # deferred action awaiting target pick
         self.pending_battle        = None   # battle deferred until dialogue closes
+        self.fade_tick             = 0      # battle intro transition timer
+        self.fade_battle           = None   # (enemies, is_boss, boss_id, zone)
+        self.fade_base_state       = None   # scene rendered under the fade
         self.damage_floats         = []
         self.float_timer           = 0
         self.levelup_queue         = []
@@ -221,6 +226,7 @@ class Game:
         elif s == STATE_GAME_OVER:  self._update_gameover()
         elif s == STATE_VICTORY:    self._update_victory()
         elif s == STATE_ENDING:     self._update_ending()
+        elif s == STATE_BATTLE_FADE: self._update_battle_fade()
 
     def _render(self):
         s = self.state
@@ -304,6 +310,9 @@ class Game:
             corr = self.party.corruption if self.party else 0
             self.renderer.render_ending(self.ending_choice, self.ending_tick,
                                         self.ending_cursor, rok, corr)
+        elif s == STATE_BATTLE_FADE:
+            self._render_field_scene(self.fade_base_state)
+            self.renderer.render_battle_fade(self.fade_tick)
 
         self.renderer.present(self.screen)
 
@@ -411,6 +420,7 @@ class Game:
                 rate = self.world.encounter_rate(nx, ny)
                 if rate > 0 and random.randint(1, rate) == 1:
                     self._start_encounter(self._get_world_zone(nx, ny))
+                    return
 
         if self.input.pressed("confirm") or self.input.pressed("menu"):
             # Check location interaction
@@ -605,9 +615,10 @@ class Game:
                 self.party.moving = True
                 self.current_dungeon.mark_visited(nx, ny)
 
-                # Random encounter
-                if random.randint(1, 4) == 1:
+                # Random encounter — roughly one fight per 7 steps
+                if random.randint(1, 7) == 1:
                     self._start_encounter(self.current_dungeon.zone, self.current_dungeon.scale)
+                    return
 
                 # Check tile
                 tile = self.current_dungeon.get_tile(nx, ny)
@@ -666,7 +677,7 @@ class Game:
             self.pending_battle = ([boss], True, boss_id)
             self._show_story_sequence(loader.story()["before_final_boss"], STATE_DUNGEON)
             return
-        self._start_battle([boss], is_boss=True, boss_id=boss_id)
+        self._begin_battle_fade([boss], is_boss=True, boss_id=boss_id)
 
     def _open_chest(self, x, y):
         if self.current_dungeon.open_chest(x, y):
@@ -756,7 +767,33 @@ class Game:
                 break
             else:
                 enemies.append(Enemy(edata, scale))
-        self._start_battle(enemies, zone=zone)
+        self._begin_battle_fade(enemies, zone=zone)
+
+    def _begin_battle_fade(self, enemies, is_boss=False, boss_id=None, zone=None):
+        """Flash + iris-wipe transition, then the battle starts."""
+        base = self.state if self.state in (STATE_WORLD, STATE_TOWN, STATE_DUNGEON) \
+            else (self.prev_state if self.prev_state in (STATE_WORLD, STATE_TOWN, STATE_DUNGEON)
+                  else STATE_WORLD)
+        self.fade_base_state = base
+        self.fade_battle = (enemies, is_boss, boss_id, zone)
+        self.fade_tick = 0
+        self.audio.play_sfx("perils")
+        self._goto(STATE_BATTLE_FADE)
+
+    def _update_battle_fade(self):
+        self.fade_tick += 1
+        if self.fade_tick >= Renderer.BATTLE_FADE_LEN:
+            enemies, is_boss, boss_id, zone = self.fade_battle
+            self.fade_battle = None
+            self._start_battle(enemies, is_boss=is_boss, boss_id=boss_id, zone=zone)
+
+    def _render_field_scene(self, state):
+        if state == STATE_TOWN and self.current_town:
+            self.renderer.render_town(self.current_town, self.party, self.tick)
+        elif state == STATE_DUNGEON and self.current_dungeon:
+            self.renderer.render_dungeon(self.current_dungeon, self.party, self.tick)
+        else:
+            self.renderer.render_world_map(self.world, self.party, self.tick)
 
     def _start_battle(self, enemies, is_boss=False, boss_id=None, zone=None):
         self.audio.play_music("boss" if is_boss else "battle")
@@ -777,6 +814,10 @@ class Game:
         self.battle_result_shown = False
         self.damage_floats = []
         self._goto(STATE_BATTLE)
+        # Post-battle "return to field" logic reads prev_state; make sure it
+        # points at the field scene, not the fade interstitial
+        if self.prev_state == STATE_BATTLE_FADE:
+            self.prev_state = self.fade_base_state or STATE_WORLD
 
     def _next_alive_char(self, current):
         members = self.party.members
@@ -1089,7 +1130,7 @@ class Game:
             # Phase 2 transition — WAAAGH! reaches full intensity
             if "ghazghkull_p2" in self.enemy_db:
                 edata = dict(self.enemy_db["ghazghkull_p2"], id="ghazghkull_p2")
-                self._start_battle([Enemy(edata)], is_boss=True, boss_id="ghazghkull_p2")
+                self._begin_battle_fade([Enemy(edata)], is_boss=True, boss_id="ghazghkull_p2")
             else:
                 self.party.set_flag(FLAG_FINAL_DONE)
                 self._show_story_sequence(story["ending_choice"], STATE_ENDING)
@@ -1253,7 +1294,7 @@ class Game:
                 if self.pending_battle:
                     enemies, is_boss, boss_id = self.pending_battle
                     self.pending_battle = None
-                    self._start_battle(enemies, is_boss=is_boss, boss_id=boss_id)
+                    self._begin_battle_fade(enemies, is_boss=is_boss, boss_id=boss_id)
 
     def _update_gameover(self):
         if self.tick > 180 and self.input.pressed("confirm"):

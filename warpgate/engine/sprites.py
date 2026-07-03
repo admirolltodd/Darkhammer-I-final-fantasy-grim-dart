@@ -18,6 +18,45 @@ def _load(name):
         return None
 
 
+# ── Zone dungeon tilesets — DCSS 32px single-tile PNGs with variants ─────────
+# Each zone gets floor/wall variant lists (picked deterministically per
+# coordinate by the renderer) plus a themed door and stairs.
+_DC = "vendors/dcss/dungeon"
+ZONE_TILESETS = {
+    "encampment": {
+        "floor":  [f"{_DC}/floor/orc_{i}.png" for i in (0, 1, 2, 3, 4, 5, 6, 7)],
+        "wall":   [f"{_DC}/wall/orc_{i}.png" for i in (0, 1, 2, 3, 4, 5, 6)],
+        "door":   f"{_DC}/doors/closed_door.png",
+        "stairs": f"{_DC}/gateways/rock_stairs_down.png",
+    },
+    "fungal_caves": {
+        "floor":  [f"{_DC}/floor/moss_{i}.png" for i in (0, 1, 2, 3)]
+                + [f"{_DC}/floor/mud_{i}.png" for i in (0, 1, 2, 3)],
+        "wall":   [f"{_DC}/wall/wall_vines_{i}.png" for i in (0, 1, 2, 3)],
+        "door":   f"{_DC}/doors/fleshy_orifice_closed.png",
+        "stairs": f"{_DC}/gateways/rock_stairs_down.png",
+    },
+    "manufactorum": {
+        "floor":  [f"{_DC}/floor/black_cobalt_{i}.png" for i in (1, 2, 3, 4, 5, 6)],
+        "wall":   [f"{_DC}/wall/brick_dark_{i}.png" for i in (0, 1, 2, 3)],
+        "door":   f"{_DC}/doors/gate_closed_middle.png",
+        "stairs": f"{_DC}/gateways/stone_stairs_down.png",
+    },
+    "rok": {
+        "floor":  [f"{_DC}/floor/volcanic_floor_{i}.png" for i in (0, 1, 2, 3, 4, 5, 6)],
+        "wall":   [f"{_DC}/wall/volcanic_wall_{i}.png" for i in (0, 1, 2, 3)],
+        "door":   f"{_DC}/doors/closed_door.png",
+        "stairs": f"{_DC}/gateways/rock_stairs_down.png",
+    },
+    "iron_fortress": {
+        "floor":  [f"{_DC}/floor/demonic_red_{i}.png" for i in (1, 2, 3, 4, 5, 6)],
+        "wall":   [f"{_DC}/wall/hell_{i}.png" for i in (1, 2, 3, 4)],
+        "door":   f"{_DC}/doors/gate_closed_middle.png",
+        "stairs": f"{_DC}/gateways/stone_stairs_down.png",
+    },
+}
+
+
 class SpriteAssets:
     """Lazily-built registry of art assets.  Every lookup degrades to None so
     the renderer keeps its procedural drawing as the universal fallback."""
@@ -58,8 +97,27 @@ class SpriteAssets:
             crop = pygame.transform.scale(crop, (dest_w, dest_h))
         return crop
 
+    def zone_tile(self, zone, kind, variant=0, dest=32):
+        spec = ZONE_TILESETS.get(zone)
+        if not spec:
+            return None
+        entry = spec.get(kind)
+        if not entry:
+            return None
+        fname = entry[variant % len(entry)] if isinstance(entry, list) else entry
+        key = ("zt", fname, dest)
+        if key not in self._tile_cache:
+            sheet = self._sheet(fname)
+            img = None
+            if sheet is not None:
+                img = sheet.copy()
+                if img.get_size() != (dest, dest):
+                    img = pygame.transform.scale(img, (dest, dest))
+            self._tile_cache[key] = img
+        return self._tile_cache[key]
+
     # ── World / dungeon / town terrain — 32 px LPC sheets ────────────────────
-    def world_tile(self, tile_id, dest=32):
+    def world_tile(self, tile_id, dest=32, shade=0):
         if self._world_tiles_spec is None:
             self._world_tiles_spec = {
                 # (sheet, src_x, src_y, src_w, src_h)
@@ -87,9 +145,17 @@ class SpriteAssets:
         if not spec:
             return None
         sname, x, y, sw, sh = spec
-        key = (sname, x, y, dest)
+        key = (sname, x, y, dest, shade)
         if key not in self._tile_cache:
-            self._tile_cache[key] = self._crop(sname, x, y, sw, sh, dest)
+            img = self._crop(sname, x, y, sw, sh, dest)
+            # Shade variants: subtle per-tile brightness shift for organic
+            # ground variety (shade 0-2 → 0/-8/-14 brightness)
+            if img is not None and shade:
+                img = img.copy()
+                dark = pygame.Surface(img.get_size(), pygame.SRCALPHA)
+                dark.fill((0, 0, 0, (0, 26, 46)[min(shade, 2)]))
+                img.blit(dark, (0, 0))
+            self._tile_cache[key] = img
         return self._tile_cache[key]
 
     # ── dungeon_tiles.png — 16×16 tiles, 1px margin → 17px stride ───────────

@@ -260,7 +260,11 @@ class Renderer:
                     phase = (anim_tick // 20 + wx + wy) % 3
                     color = [(20,35,55),(25,45,60),(15,30,50)][phase]
 
-                sprite = self.assets.world_tile(TILE_ID_NAMES.get(tile_id))
+                # Subtle deterministic shade variation breaks up ground repetition
+                shade = 0
+                if tile_id in (T_WASTELAND, T_ASH, T_RUIN_FLOOR, T_CEMENT, T_GRASS):
+                    shade = (wx * 3 + wy * 5 + (wx // 3) * (wy // 3)) % 3
+                sprite = self.assets.world_tile(TILE_ID_NAMES.get(tile_id), TILE, shade)
                 if sprite:
                     self.surface.blit(sprite, (px, py))
                 else:
@@ -294,6 +298,37 @@ class Renderer:
         self.draw_text(f"LOC: {party.location}", 4, INTERNAL_H - 13, C_MID_GREY)
         self.draw_text(f"GELT: {party.gelt}", 160, INTERNAL_H - 13, C_GOLD)
         self.draw_text(f"CORRUPT: {party.corruption}%", 208, INTERNAL_H - 13, UI_CORRUPT if party.corruption > 25 else C_MID_GREY)
+
+    # ── Battle intro transition ───────────────────────────────────────────────
+    # Classic JRPG encounter flash: two white pulses, then an iris wipe to
+    # black. Drawn OVER the current field scene. tick runs 0..BATTLE_FADE_LEN.
+    BATTLE_FADE_LEN = 45
+
+    def render_battle_fade(self, tick):
+        t = max(0, tick)
+        # White pulses at 2-6 and 10-14
+        if 2 <= t <= 6 or 10 <= t <= 14:
+            flash = pygame.Surface((INTERNAL_W, INTERNAL_H))
+            flash.fill((235, 230, 220))
+            flash.set_alpha(170)
+            self.surface.blit(flash, (0, 0))
+        if t > 16:
+            # Iris wipe: black bars close in from all four edges
+            p = min(1.0, (t - 16) / (self.BATTLE_FADE_LEN - 18))
+            ease = p * p * (3 - 2 * p)
+            bx = int(INTERNAL_W // 2 * ease)
+            by = int(INTERNAL_H // 2 * ease)
+            if bx > 0:
+                pygame.draw.rect(self.surface, C_BLACK, (0, 0, bx, INTERNAL_H))
+                pygame.draw.rect(self.surface, C_BLACK, (INTERNAL_W - bx, 0, bx, INTERNAL_H))
+            if by > 0:
+                pygame.draw.rect(self.surface, C_BLACK, (0, 0, INTERNAL_W, by))
+                pygame.draw.rect(self.surface, C_BLACK, (0, INTERNAL_H - by, INTERNAL_W, by))
+            # Fading veil underneath the iris for a smoother close
+            veil = pygame.Surface((INTERNAL_W, INTERNAL_H))
+            veil.fill((0, 0, 0))
+            veil.set_alpha(int(140 * ease))
+            self.surface.blit(veil, (0, 0))
 
     def _draw_battle_background(self, anim_tick, zone="ash_wastes"):
         """Layered battle backdrop: sprite backdrop (if available) + procedural overlays."""
@@ -414,10 +449,12 @@ class Renderer:
             if enemy.scanned or enemy.boss:
                 self.draw_hp_bar(ex - 20, ey + 38, 40, enemy.hp, enemy.max_hp)
                 self.draw_text(f"{enemy.hp}", ex - 18, ey + 46, C_MID_GREY, shadow=False)
-            self.draw_text(enemy.name[:10], ex - 22, ey + 50, UI_TEXT, shadow=False)
+            # Staggered short labels so four side-by-side names don't collide
+            label_y = ey + 50 + (i % 2) * 9
+            self.draw_text(enemy.name[:6], ex - 22, label_y, UI_TEXT, shadow=False)
             if enemy.status != STATUS_NONE:
                 sc = STATUS_COLORS.get(enemy.status, C_WHITE)
-                self.draw_text(STATUS_NAMES[enemy.status][:4], ex - 18, ey + 58, sc, shadow=False)
+                self.draw_text(STATUS_NAMES[enemy.status][:4], ex - 18, label_y + 9, sc, shadow=False)
 
         # ── Party status panel ──
         panel_y = INTERNAL_H - 60
@@ -816,47 +853,58 @@ class Renderer:
                 py = ty * TILE
                 tile_id = dungeon.get_tile(wx, wy)
 
-                # Zone-specific tileset lookup
+                # Themed DCSS tileset for this zone, deterministic variant per tile
                 sprite = None
-                if iron_fortress:
-                    if tile_id in (T_RUIN_FLOOR, T_DUNGEON):
-                        sprite = self.assets.space_block_tile(
-                            SpriteAssets.SBLOCK_FLOOR_COL, SpriteAssets.SBLOCK_FLOOR_ROW, TILE)
-                    elif tile_id == T_WALL:
-                        sprite = self.assets.space_block_tile(
-                            SpriteAssets.SBLOCK_WALL_COL, SpriteAssets.SBLOCK_WALL_ROW, TILE)
-                    elif tile_id == T_DOOR:
-                        sprite = self.assets.space_block_tile(
-                            SpriteAssets.SBLOCK_DOOR_COL, SpriteAssets.SBLOCK_DOOR_ROW, TILE)
-                elif fungal_caves:
-                    if tile_id in (T_RUIN_FLOOR, T_DUNGEON):
-                        sprite = self.assets.kenney_cave_tile(
-                            SpriteAssets.KCAVE_FLOOR_COL, SpriteAssets.KCAVE_FLOOR_ROW, TILE)
-                    elif tile_id == T_WALL:
-                        sprite = self.assets.kenney_cave_tile(
-                            SpriteAssets.KCAVE_WALL_COL, SpriteAssets.KCAVE_WALL_ROW, TILE)
-                    elif tile_id == T_DOOR:
-                        sprite = self.assets.kenney_cave_tile(
-                            SpriteAssets.KCAVE_DOOR_COL, SpriteAssets.KCAVE_DOOR_ROW, TILE)
-                    elif tile_id == T_STAIRS:
-                        sprite = self.assets.kenney_cave_tile(
-                            SpriteAssets.KCAVE_STAIR_COL, SpriteAssets.KCAVE_STAIR_ROW, TILE)
-                else:
-                    if tile_id in (T_RUIN_FLOOR, T_DUNGEON):
-                        sprite = self.assets.dungeon_tile(
-                            SpriteAssets.DTILE_FLOOR_COL, SpriteAssets.DTILE_FLOOR_ROW, TILE)
-                    elif tile_id == T_WALL:
-                        sprite = self.assets.dungeon_tile(
-                            SpriteAssets.DTILE_WALL_COL, SpriteAssets.DTILE_WALL_ROW, TILE)
-                    elif tile_id == T_DOOR:
-                        sprite = self.assets.dungeon_tile(
-                            SpriteAssets.DTILE_DOOR_COL, SpriteAssets.DTILE_DOOR_ROW, TILE)
-                    elif tile_id == T_CHEST:
-                        sprite = self.assets.dungeon_tile(
-                            SpriteAssets.DTILE_CHEST_COL, SpriteAssets.DTILE_CHEST_ROW, TILE)
-                    elif tile_id == T_STAIRS:
-                        sprite = self.assets.dungeon_tile(
-                            SpriteAssets.DTILE_STAIR_COL, SpriteAssets.DTILE_STAIR_ROW, TILE)
+                variant = (wx * 7 + wy * 13 + (wx * wy) % 5) % 97
+                if tile_id in (T_RUIN_FLOOR, T_DUNGEON):
+                    sprite = self.assets.zone_tile(dzone, "floor", variant, TILE)
+                elif tile_id == T_WALL:
+                    sprite = self.assets.zone_tile(dzone, "wall", variant, TILE)
+                elif tile_id == T_DOOR:
+                    sprite = self.assets.zone_tile(dzone, "door", 0, TILE)
+                elif tile_id == T_STAIRS:
+                    sprite = self.assets.zone_tile(dzone, "stairs", 0, TILE)
+
+                # Fallbacks: older sheet-based tilesets
+                if sprite is None:
+                    if iron_fortress:
+                        if tile_id in (T_RUIN_FLOOR, T_DUNGEON):
+                            sprite = self.assets.space_block_tile(
+                                SpriteAssets.SBLOCK_FLOOR_COL, SpriteAssets.SBLOCK_FLOOR_ROW, TILE)
+                        elif tile_id == T_WALL:
+                            sprite = self.assets.space_block_tile(
+                                SpriteAssets.SBLOCK_WALL_COL, SpriteAssets.SBLOCK_WALL_ROW, TILE)
+                        elif tile_id == T_DOOR:
+                            sprite = self.assets.space_block_tile(
+                                SpriteAssets.SBLOCK_DOOR_COL, SpriteAssets.SBLOCK_DOOR_ROW, TILE)
+                    elif fungal_caves:
+                        if tile_id in (T_RUIN_FLOOR, T_DUNGEON):
+                            sprite = self.assets.kenney_cave_tile(
+                                SpriteAssets.KCAVE_FLOOR_COL, SpriteAssets.KCAVE_FLOOR_ROW, TILE)
+                        elif tile_id == T_WALL:
+                            sprite = self.assets.kenney_cave_tile(
+                                SpriteAssets.KCAVE_WALL_COL, SpriteAssets.KCAVE_WALL_ROW, TILE)
+                    if sprite is None:
+                        if tile_id in (T_RUIN_FLOOR, T_DUNGEON):
+                            sprite = self.assets.dungeon_tile(
+                                SpriteAssets.DTILE_FLOOR_COL, SpriteAssets.DTILE_FLOOR_ROW, TILE)
+                        elif tile_id == T_WALL:
+                            sprite = self.assets.dungeon_tile(
+                                SpriteAssets.DTILE_WALL_COL, SpriteAssets.DTILE_WALL_ROW, TILE)
+                        elif tile_id == T_DOOR:
+                            sprite = self.assets.dungeon_tile(
+                                SpriteAssets.DTILE_DOOR_COL, SpriteAssets.DTILE_DOOR_ROW, TILE)
+                        elif tile_id == T_STAIRS:
+                            sprite = self.assets.dungeon_tile(
+                                SpriteAssets.DTILE_STAIR_COL, SpriteAssets.DTILE_STAIR_ROW, TILE)
+
+                if sprite is None and tile_id == T_CHEST:
+                    # Chest sits on a floor tile
+                    floor = self.assets.zone_tile(dzone, "floor", variant, TILE)
+                    if floor:
+                        self.surface.blit(floor, (px, py))
+                    sprite = self.assets.dungeon_tile(
+                        SpriteAssets.DTILE_CHEST_COL, SpriteAssets.DTILE_CHEST_ROW, TILE)
 
                 # Fall back to world_tile then solid colour
                 if sprite is None:
