@@ -295,31 +295,40 @@ class Renderer:
         self.draw_text(f"GELT: {party.gelt}", 160, INTERNAL_H - 13, C_GOLD)
         self.draw_text(f"CORRUPT: {party.corruption}%", 208, INTERNAL_H - 13, UI_CORRUPT if party.corruption > 25 else C_MID_GREY)
 
-    def _draw_battle_background(self, anim_tick):
-        """Layered SNES-style battle backdrop: scorched warzone sky + perspective ground."""
+    def _draw_battle_background(self, anim_tick, zone="ash_wastes"):
+        """Layered battle backdrop: sprite backdrop (if available) + procedural overlays."""
         BATTLE_H = INTERNAL_H - 60
         HORIZON  = 55
         VP       = INTERNAL_W // 2
 
-        # Sky: banded gradient, deep purple-black → ember-amber at horizon
-        sky_bands = [
-            (0,               HORIZON * 1 // 5, ( 6,  3, 14)),
-            (HORIZON * 1 // 5, HORIZON * 2 // 5, (10,  5, 18)),
-            (HORIZON * 2 // 5, HORIZON * 3 // 5, (18,  7, 16)),
-            (HORIZON * 3 // 5, HORIZON * 4 // 5, (28, 10, 12)),
-            (HORIZON * 4 // 5, HORIZON,           (42, 15,  8)),
-        ]
-        for y0, y1, c in sky_bands:
-            pygame.draw.rect(self.surface, c, (0, y0, INTERNAL_W, max(1, y1 - y0)))
+        # Try sprite-based city backdrop
+        backdrop = self.assets.battle_backdrop(zone, INTERNAL_W, BATTLE_H)
+        if backdrop:
+            self.surface.blit(backdrop, (0, 0))
+            tint = pygame.Surface((INTERNAL_W, BATTLE_H))
+            tint.fill((0, 0, 0))
+            tint.set_alpha(110)
+            self.surface.blit(tint, (0, 0))
+        else:
+            # Procedural sky: banded gradient, deep purple-black → ember-amber at horizon
+            sky_bands = [
+                (0,                HORIZON * 1 // 5, ( 6,  3, 14)),
+                (HORIZON * 1 // 5, HORIZON * 2 // 5, (10,  5, 18)),
+                (HORIZON * 2 // 5, HORIZON * 3 // 5, (18,  7, 16)),
+                (HORIZON * 3 // 5, HORIZON * 4 // 5, (28, 10, 12)),
+                (HORIZON * 4 // 5, HORIZON,           (42, 15,  8)),
+            ]
+            for y0, y1, c in sky_bands:
+                pygame.draw.rect(self.surface, c, (0, y0, INTERNAL_W, max(1, y1 - y0)))
 
-        # Ground: scorched plain below horizon
-        ground_bands = [
-            (HORIZON,      HORIZON + 25, (22, 14, 10)),
-            (HORIZON + 25, HORIZON + 60, (17, 11,  8)),
-            (HORIZON + 60, BATTLE_H,     (12,  8,  6)),
-        ]
-        for y0, y1, c in ground_bands:
-            pygame.draw.rect(self.surface, c, (0, y0, INTERNAL_W, max(1, y1 - y0)))
+            # Ground: scorched plain below horizon
+            ground_bands = [
+                (HORIZON,      HORIZON + 25, (22, 14, 10)),
+                (HORIZON + 25, HORIZON + 60, (17, 11,  8)),
+                (HORIZON + 60, BATTLE_H,     (12,  8,  6)),
+            ]
+            for y0, y1, c in ground_bands:
+                pygame.draw.rect(self.surface, c, (0, y0, INTERNAL_W, max(1, y1 - y0)))
 
         # Horizon fire-glow (pulsing)
         phase = math.sin(anim_tick * 0.04) * 0.5 + 0.5
@@ -369,7 +378,8 @@ class Renderer:
                                  (sx + drift, sy, 4, 6))
 
     def render_battle(self, battle, menu_state, anim_tick, damage_floats=None):
-        self._draw_battle_background(anim_tick)
+        zone = getattr(battle, "zone", "ash_wastes") or "ash_wastes"
+        self._draw_battle_background(anim_tick, zone)
 
         alive_e = battle.alive_enemies()
         alive_p = battle.alive_party()
@@ -754,7 +764,9 @@ class Renderer:
         cam_y = party.world_y - INTERNAL_H // (TILE * 2)
 
         # Choose tileset based on dungeon zone
-        iron_fortress = getattr(dungeon, "zone", "") == "iron_fortress"
+        dzone        = getattr(dungeon, "zone", "")
+        iron_fortress = dzone == "iron_fortress"
+        fungal_caves  = dzone == "fungal_caves"
 
         DTILE_COLORS = {
             T_WALL:       (25, 20, 20),
@@ -783,7 +795,7 @@ class Renderer:
                 # Zone-specific tileset lookup
                 sprite = None
                 if iron_fortress:
-                    if tile_id == T_RUIN_FLOOR or tile_id == T_DUNGEON:
+                    if tile_id in (T_RUIN_FLOOR, T_DUNGEON):
                         sprite = self.assets.space_block_tile(
                             SpriteAssets.SBLOCK_FLOOR_COL, SpriteAssets.SBLOCK_FLOOR_ROW, TILE)
                     elif tile_id == T_WALL:
@@ -792,8 +804,21 @@ class Renderer:
                     elif tile_id == T_DOOR:
                         sprite = self.assets.space_block_tile(
                             SpriteAssets.SBLOCK_DOOR_COL, SpriteAssets.SBLOCK_DOOR_ROW, TILE)
+                elif fungal_caves:
+                    if tile_id in (T_RUIN_FLOOR, T_DUNGEON):
+                        sprite = self.assets.kenney_cave_tile(
+                            SpriteAssets.KCAVE_FLOOR_COL, SpriteAssets.KCAVE_FLOOR_ROW, TILE)
+                    elif tile_id == T_WALL:
+                        sprite = self.assets.kenney_cave_tile(
+                            SpriteAssets.KCAVE_WALL_COL, SpriteAssets.KCAVE_WALL_ROW, TILE)
+                    elif tile_id == T_DOOR:
+                        sprite = self.assets.kenney_cave_tile(
+                            SpriteAssets.KCAVE_DOOR_COL, SpriteAssets.KCAVE_DOOR_ROW, TILE)
+                    elif tile_id == T_STAIRS:
+                        sprite = self.assets.kenney_cave_tile(
+                            SpriteAssets.KCAVE_STAIR_COL, SpriteAssets.KCAVE_STAIR_ROW, TILE)
                 else:
-                    if tile_id == T_RUIN_FLOOR or tile_id == T_DUNGEON:
+                    if tile_id in (T_RUIN_FLOOR, T_DUNGEON):
                         sprite = self.assets.dungeon_tile(
                             SpriteAssets.DTILE_FLOOR_COL, SpriteAssets.DTILE_FLOOR_ROW, TILE)
                     elif tile_id == T_WALL:

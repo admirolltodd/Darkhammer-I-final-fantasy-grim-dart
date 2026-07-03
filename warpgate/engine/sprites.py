@@ -226,25 +226,33 @@ class SpriteAssets:
         if "boss" in sprite_type:
             return None
         if self._monster_map is None:
+            # Ork types → DCSS orc sprites (32×32 individual PNGs)
             self._monster_map = {
-                "ork_flying":    ("enemies/bee.png",              None),
-                "ork_mounted":   ("enemies/snake.png",            None),
-                "ork_psyker":    ("enemies/eyeball.png",          None),
-                "small_ork":     ("enemies/small_worm.png",       None),
-                "beast_large":   ("enemies/big_worm.png",         None),
-                "beast":         ("enemies/snake.png",            None),
-                "daemon_swarm":  ("enemies/bat.png",       (0,  0, 32, 32)),
-                "warp_bat":      ("enemies/bat.png",       (0,  0, 32, 32)),
-                "warp_ghost":    ("enemies/ghost.png",     (0,  0, 30, 46)),
-                "nurgle_spawn":  ("enemies/slime.png",     (0,  0, 32, 32)),
-                "plague_slime":  ("enemies/slime.png",     (0,  0, 32, 32)),
-                "chaos_spawn":   ("enemies/brackish.png",  (0,  0, 32, 32)),
-                "warp_spawn":    ("enemies/brackish.png",  (0,  0, 32, 32)),
-                "nurgle_plant":  ("enemies/man_eater_flower.png", (0, 0, 36, 38)),
-                "daemon_flora":  ("enemies/man_eater_flower.png", (0, 0, 36, 38)),
-                "daemon_wyrm":   ("enemies/DAGRONS5.png",  (0,  0, 64, 64)),
-                "warp_herald":   ("enemies/pumpking.png",  (0,  0, 46, 46)),
-                "plague_herald": ("enemies/pumpking.png",  (0,  0, 46, 46)),
+                "small_ork":     ("vendors/dcss/monster/hobgoblin_new.png",    (0, 0, 32, 32)),
+                "ork_mek":       ("vendors/dcss/monster/orc_high_priest_new.png", (0, 0, 32, 32)),
+                "ork_mounted":   ("vendors/dcss/monster/orc_warrior_new.png",  (0, 0, 32, 32)),
+                "ork_mega":      ("vendors/dcss/monster/orc_knight_new.png",   (0, 0, 32, 32)),
+                "ork_psyker":    ("vendors/dcss/monster/orc_sorcerer_new.png", (0, 0, 32, 32)),
+                "ork_heavy":     ("vendors/dcss/monster/orc_warrior_new.png",  (0, 0, 32, 32)),
+                "ork_walker":    ("vendors/dcss/monster/abomination_large.png",(0, 0, 32, 32)),
+                "ork_flying":    ("vendors/dcss/monster/giant_bat.png",        (0, 0, 32, 32)),
+                "ork":           ("vendors/dcss/monster/orc_new.png",          (0, 0, 32, 32)),
+                # Beasts
+                "beast_large":   ("vendors/dcss/monster/troll.png",            (0, 0, 32, 32)),
+                "beast":         ("vendors/dcss/monster/giant_scorpion.png",   (0, 0, 32, 32)),
+                # Chaos / daemon types → DCSS demon sprites
+                "chaos_spawn":   ("vendors/dcss/monster/chaos_spawn.png",      (0, 0, 32, 32)),
+                "warp_spawn":    ("vendors/dcss/monster/chaos_spawn.png",      (0, 0, 32, 32)),
+                "daemon_swarm":  ("vendors/dcss/monster/imp.png",              (0, 0, 32, 32)),
+                "warp_bat":      ("vendors/dcss/monster/giant_bat.png",        (0, 0, 32, 32)),
+                "warp_ghost":    ("vendors/dcss/monster/imp.png",              (0, 0, 32, 32)),
+                "nurgle_spawn":  ("vendors/dcss/monster/putrid.png",           (0, 0, 32, 32)),
+                "plague_slime":  ("vendors/dcss/monster/giant_slug.png",       (0, 0, 32, 32)),
+                "nurgle_plant":  ("vendors/dcss/monster/beast.png",            (0, 0, 32, 32)),
+                "daemon_flora":  ("vendors/dcss/monster/beast.png",            (0, 0, 32, 32)),
+                "daemon_wyrm":   ("vendors/dcss/monster/green_death.png",      (0, 0, 32, 32)),
+                "warp_herald":   ("vendors/dcss/monster/cacodemon.png",        (0, 0, 32, 32)),
+                "plague_herald": ("vendors/dcss/monster/putrid.png",           (0, 0, 32, 32)),
             }
         fname = None
         crop  = None
@@ -278,10 +286,75 @@ class SpriteAssets:
             self._char_cache[cache_key] = frame
         return self._char_cache[cache_key]
 
+    # ── Kenney roguelike-caves-dungeons tileset ──────────────────────────────
+    # roguelikeDungeon_transparent.png: 29 cols × 18 rows, 16px tiles, 1px gap
+    # (stride = 17px; first tile at x=0, y=0)
+    KCAVE_FLOOR_COL, KCAVE_FLOOR_ROW = 7,  0   # cave stone floor
+    KCAVE_WALL_COL,  KCAVE_WALL_ROW  = 0,  2   # dark stone wall
+    KCAVE_DOOR_COL,  KCAVE_DOOR_ROW  = 16, 6   # wooden door
+    KCAVE_STAIR_COL, KCAVE_STAIR_ROW = 20, 3   # stairs
+
+    def kenney_cave_tile(self, col, row, dest=32):
+        name = "vendors/kenney_roguelike_caves/roguelikeDungeon_transparent.png"
+        x, y = col * 17, row * 17
+        key  = ("kcave", col, row, dest)
+        if key not in self._tile_cache:
+            self._tile_cache[key] = self._crop(name, x, y, 16, 16, dest)
+        return self._tile_cache[key]
+
+    # ── Kenney tiny-dungeon tileset ───────────────────────────────────────────
+    # tilemap_packed.png: 12 cols × 11 rows, 16px tiles, no gap
+    KTINY_FLOOR_COL, KTINY_FLOOR_ROW = 0, 3    # dungeon floor
+    KTINY_WALL_COL,  KTINY_WALL_ROW  = 0, 0    # solid wall
+    KTINY_DOOR_COL,  KTINY_DOOR_ROW  = 4, 1    # door
+
+    def kenney_tiny_tile(self, col, row, dest=32):
+        name = "vendors/kenney_tiny_dungeon/tilemap_packed.png"
+        x, y = col * 16, row * 16
+        key  = ("ktiny", col, row, dest)
+        if key not in self._tile_cache:
+            self._tile_cache[key] = self._crop(name, x, y, 16, 16, dest)
+        return self._tile_cache[key]
+
+    # ── Battle backdrop ───────────────────────────────────────────────────────
+    def battle_backdrop(self, zone="ash_wastes", dest_w=256, dest_h=160):
+        key = ("backdrop", zone, dest_w, dest_h)
+        if key in self._gui_bg:
+            return self._gui_bg[key]
+        # City zones get the ruined city background; all others get the sky layer
+        if zone in ("iron_fortress", "manufactorum", "encampment"):
+            fname = "environments/city_backdrop/City Background.png"
+        else:
+            fname = "environments/city_backdrop/Sky.png"
+        sheet = self._sheet(fname)
+        surf  = None
+        if sheet is not None:
+            sw, sh = sheet.get_size()
+            # Crop centre of the source to maintain aspect
+            scale = max(dest_w / sw, dest_h / sh)
+            cw = int(dest_w / scale)
+            ch = int(dest_h / scale)
+            cx = max(0, (sw - cw) // 2)
+            cy = max(0, (sh - ch) // 2)
+            try:
+                crop = sheet.subsurface((cx, cy, min(cw, sw), min(ch, sh))).copy()
+                surf = pygame.transform.scale(crop, (dest_w, dest_h))
+            except (ValueError, pygame.error):
+                surf = None
+        self._gui_bg[key] = surf
+        return surf
+
     # ── Boss sprites (explicit path — bypasses the boss guard above) ──────────
     def boss_sprite(self, sprite_type, dest=48):
         if self._boss_map is None:
             self._boss_map = {
+                # DCSS-based bosses
+                "boss_ork":           ("vendors/dcss/monster/orc_warlord.png",  (0, 0, 32, 32)),
+                "boss_ghazghkull_p2": ("vendors/dcss/monster/fiend.png",        (0, 0, 32, 32)),
+                "boss_ghazghkull":    ("vendors/dcss/monster/executioner.png",  (0, 0, 32, 32)),
+                "boss_squiggoth":     ("vendors/dcss/monster/troll.png",        (0, 0, 32, 32)),
+                "boss_dok":           ("vendors/dcss/monster/putrid.png",       (0, 0, 32, 32)),
+                # Original hand-drawn bosses kept for any future chaos enemies
                 "boss_plague": ("enemies/PlaugeKing.png", None),
                 "boss_herald": ("enemies/pumpking.png",   (0, 0, 46, 46)),
                 "boss_wyrm":   ("enemies/DAGRONS5.png",   (0, 0, 80, 80)),
