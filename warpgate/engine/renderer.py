@@ -387,6 +387,19 @@ class Renderer:
         # ── Draw enemies ──
         slots = [(INTERNAL_W // 5, 30), (2*INTERNAL_W // 5, 30),
                  (3*INTERNAL_W // 5, 30), (4*INTERNAL_W // 5, 30)]
+        # Resolve the currently hovered target (targeting mode)
+        target_obj = None
+        tm = menu_state.get("target_mode") if menu_state else None
+        if tm:
+            if tm == "enemy":
+                pool = battle.alive_enemies()
+            elif tm == "fallen":
+                pool = [m for m in battle.party.members if not m.alive]
+            else:
+                pool = battle.alive_party()
+            if pool:
+                target_obj = pool[menu_state.get("target_idx", 0) % len(pool)]
+
         for i, enemy in enumerate(battle.enemies[:4]):
             if i >= len(slots):
                 break
@@ -394,6 +407,9 @@ class Renderer:
             if not enemy.alive:
                 continue
             self._draw_enemy_sprite(enemy, ex - 20, ey, anim_tick)
+            if enemy is target_obj and (anim_tick // 8) % 2 == 0:
+                pygame.draw.polygon(self.surface, C_GOLD,
+                                    [(ex - 4, ey - 14), (ex + 4, ey - 14), (ex, ey - 7)])
             # HP bar (only if scanned)
             if enemy.scanned or enemy.boss:
                 self.draw_hp_bar(ex - 20, ey + 38, 40, enemy.hp, enemy.max_hp)
@@ -412,6 +428,10 @@ class Renderer:
             cx = 4 + i * 64
             cy = panel_y + 2
             color = UI_TEXT if char.alive else C_MID_GREY
+            if char is target_obj and (anim_tick // 8) % 2 == 0:
+                pygame.draw.polygon(self.surface, C_GOLD,
+                                    [(cx - 1, cy + 1), (cx - 1, cy + 7), (cx + 3, cy + 4)])
+                cx += 6
             self.draw_text(char.name[:6], cx, cy, color, shadow=False)
             self.draw_text(f"LV{char.level}", cx + 44, cy, C_MID_GREY, shadow=False)
             hp_c = UI_HP_GOOD if char.hp > char.max_hp * 0.5 else (UI_HP_MID if char.hp > char.max_hp * 0.25 else UI_HP_LOW)
@@ -431,7 +451,11 @@ class Renderer:
                 self.draw_text(f"AoF:{char.faith_pts}", cx, cy + 42, C_GOLD, shadow=False)
 
         # ── Command menu ──
-        if menu_state:
+        if tm:
+            hint = "SELECT TARGET  (ARROWS: CYCLE / ENTER: CONFIRM / ESC: BACK)"
+            self.draw_box(0, panel_y - 28, INTERNAL_W, 26)
+            self.draw_text(hint, 8, panel_y - 18, C_GOLD, shadow=False)
+        elif menu_state:
             self._draw_battle_menu(menu_state, panel_y)
 
         # ── Battle log ──
@@ -987,39 +1011,72 @@ class Renderer:
                 self.draw_text(f"CORRUPT: {s['corruption']}%  TIME: {s['playtime']//60}m", 28, sy + 24, C_MID_GREY)
         self.draw_text("ENTER: CONFIRM  ESC: BACK", 40, INTERNAL_H - 28, C_MID_GREY)
 
-    def render_ending(self, choice, tick):
+    def render_ending(self, choice, tick, cursor=0, rok_cleared=False, corruption=0):
         self.surface.fill(C_BLACK)
         self.draw_scrolling_stars(0.1)
-        lines_sacrifice = [
-            "THE ANATHEMA SHARD SEALS THE WARP RIFT.",
-            "ONE WARRIOR REMAINS BEHIND.",
-            "THE VOID COLLAPSES. THE SCREAMING STOPS.",
-            "MORTIS PRIME IS SAVED.",
-            "",
-            "FOR NOW.",
+
+        # ── Choice screen: Ghazghkull kneels — what do you do? ──
+        if choice is None:
+            self.draw_title_text("THE BEAST KNEELS", 30, 30, C_GOLD, size=16)
+            self.draw_text("GHAZGHKULL MAG URUK THRAKA IS BEATEN.", 20, 70, C_LIGHT_GREY)
+            self.draw_text("YOUR WEAPON IS RAISED.", 20, 84, C_LIGHT_GREY)
+            options = [
+                "EXECUTE THE BEAST",
+                "LEAVE HIM TO ARMAGEDDON'S DEFENDERS",
+            ]
+            for i, opt in enumerate(options):
+                y = 120 + i * 20
+                c = C_GOLD if cursor == i else C_MID_GREY
+                if cursor == i:
+                    self.draw_text(">", 24, y, C_GOLD)
+                self.draw_text(opt, 36, y, c)
+            self.draw_text("UP/DOWN TO CHOOSE - ENTER TO DECIDE", 24, INTERNAL_H - 20, C_DARK_GOLD)
+            return
+
+        # ── Epilogue ──
+        if choice == "execution":
+            lines = [
+                "THE SHOT ECHOES THROUGH THE IRON FORTRESS.",
+                "GHAZGHKULL MAG URUK THRAKA IS DEAD.",
+                "ACROSS ARMAGEDDON, A MILLION ORKS FEEL IT.",
+                "THE WAAAGH! DOES NOT END. IT SHATTERS --",
+                "A THOUSAND WARBOSSES NOW CLAIM HIS THRONE,",
+                "AND TURN THEIR CHOPPAS ON EACH OTHER.",
+            ]
+        else:
+            lines = [
+                "YOU LOWER YOUR WEAPON.",
+                "YARRICK'S LEGIONS TAKE THE BEAST IN CHAINS.",
+                "PROPHET OF THE WAAAGH! -- BROKEN, DISPLAYED, DIMINISHED.",
+                "EVERY ORK ON ARMAGEDDON SEES THEIR GOD-WARLORD KNEEL.",
+                "SOME SAY HE SMILED AS THE CHAINS CLOSED.",
+                "SOME SAY THIS WAS HIS PLAN ALL ALONG.",
+            ]
+        lines.append("")
+        if rok_cleared:
+            lines += [
+                "THE WARP BEACON IS SILENT. NO NEW WAAAGH!S ANSWER.",
+                "ARMAGEDDON WILL BURN FOR YEARS. BUT IT WILL HOLD.",
+            ]
+        else:
+            lines += [
+                "BUT IN THE VOID, THE BEACON STILL SINGS.",
+                "MORE SHIPS. MORE WAAAGH!S. THEY ARE COMING.",
+            ]
+        if corruption >= 50:
+            lines += ["", "AND IN YOUR DREAMS, THE WARP WHISPERS YOUR NAMES."]
+        lines += [
             "",
             "IN THE GRIM DARKNESS OF THE FAR FUTURE,",
-            "SOME THINGS ARE WORTH DYING FOR.",
+            "THERE IS ONLY WAR.",
             "THE EMPEROR ENDURES. SO MUST WE.",
         ]
-        lines_gambit = [
-            "THE TECH-PRIEST RIGS THE SHARD TO A DETONATOR.",
-            "THE WARBAND FLEES. THE DETONATOR FIRES.",
-            "THE RIFT SEALS. MOSTLY.",
-            "SMALL TEARS IN REALITY PERSIST.",
-            "THE WAR IS NOT OVER.",
-            "IT WILL NEVER BE OVER.",
-            "",
-            "VICTORY IS A LIE TOLD BY SURVIVORS.",
-            "THE EMPEROR ENDURES. THAT IS ENOUGH.",
-        ]
-        lines = lines_sacrifice if choice == "sacrifice" else lines_gambit
+
         max_lines = min(len(lines), tick // 40)
         for i, line in enumerate(lines[:max_lines]):
-            y = 30 + i * 14
-            alpha = min(255, (tick - i * 40) * 8)
+            y = 24 + i * 12
             c = C_LIGHT_GREY if line else C_DARK_GREY
-            self.draw_text(line, 20, y, c if line else C_BLACK)
+            self.draw_text(line, 16, y, c if line else C_BLACK)
 
         if tick > len(lines) * 40 + 60:
             self.draw_text("PRESS ENTER", 88, INTERNAL_H - 16, C_GOLD)

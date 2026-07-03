@@ -27,6 +27,7 @@ class Enemy:
         self.always_berserk = d.get("always_berserk", False)
         self.berserk_threshold = d.get("berserk_threshold", 0.0)
         self.healed_by_holy = d.get("healed_by_holy", False)
+        self.holy_resist    = d.get("holy_resist", False)
         self.casts_abilities = d.get("casts_abilities", False)
         self.splits_on_death = d.get("splits_on_death", None)
         self.synapse = d.get("synapse", False)
@@ -49,6 +50,9 @@ class Enemy:
         if dmg_type == DMG_HOLY and self.healed_by_holy:
             self.hp = min(self.max_hp, self.hp + amount)
             return -amount, False  # negative = healed
+        if dmg_type == DMG_HOLY and self.holy_resist:
+            # Gork and Mork shield their prophet — faith barely bites
+            amount = max(1, amount // 4)
 
         if not ignore_def:
             reduction = self.defense // 2
@@ -89,30 +93,29 @@ class Enemy:
             target = random.choice(party_alive)
             return {"type": "attack", "target": target, "str_mult": 1.5}
 
-        # Boss abilities
+        # Boss abilities — recovery abilities gated behind low HP / afflictions,
+        # everything else joins the pool. ~45% chance per turn to use one.
         if self.boss and self.boss_abilities:
+            for ab in list(self._boss_ability_cooldowns.keys()):
+                if self._boss_ability_cooldowns[ab] > 0:
+                    self._boss_ability_cooldowns[ab] -= 1
+            RECOVERY = {"painboy_fix", "gorks_favor", "gork_morka_blessing"}
+            usable = []
             for ab in self.boss_abilities:
-                if self._boss_ability_cooldowns.get(ab, 0) == 0:
-                    if ab == "waaagh_charge" and turn_num % 3 == 0:
-                        self._boss_ability_cooldowns[ab] = 4
-                        return {"type": "boss_ability", "ability": ab}
-                    elif ab == "ead_butt" and turn_num % 5 == 0:
-                        self._boss_ability_cooldowns[ab] = 5
-                        return {"type": "boss_ability", "ability": ab}
-                    elif ab == "gorks_favor" and self.hp < self.max_hp * 0.5 and turn_num % 4 == 0:
-                        self._boss_ability_cooldowns[ab] = 4
-                        return {"type": "boss_ability", "ability": ab}
-                    elif ab == "summon_genestealers" and turn_num % 3 == 0:
-                        self._boss_ability_cooldowns[ab] = 3
-                        return {"type": "boss_ability", "ability": ab}
-                    elif ab == "synapse_lock_all" and turn_num % 4 == 0:
-                        self._boss_ability_cooldowns[ab] = 4
-                        return {"type": "boss_ability", "ability": ab}
-
-        # Decrement cooldowns
-        for ab in list(self._boss_ability_cooldowns.keys()):
-            if self._boss_ability_cooldowns[ab] > 0:
-                self._boss_ability_cooldowns[ab] -= 1
+                if ab == "phase2_transition" or self._boss_ability_cooldowns.get(ab, 0) > 0:
+                    continue
+                if ab in RECOVERY:
+                    if self.hp < self.max_hp * 0.5:
+                        usable.append(ab)
+                elif ab == "shake_off":
+                    if self.status != STATUS_NONE or self.debuffs:
+                        usable.append(ab)
+                else:
+                    usable.append(ab)
+            if usable and turn_num > 0 and random.random() < 0.45:
+                ab = random.choice(usable)
+                self._boss_ability_cooldowns[ab] = 3
+                return {"type": "boss_ability", "ability": ab}
 
         # Normal AI
         if ai == AI_AGGRESSIVE:
@@ -122,10 +125,10 @@ class Enemy:
         elif ai == AI_RANDOM:
             target = random.choice(party_alive)
         elif ai == AI_TACTICIAN:
-            # Mix of attack and debuff
-            if turn_num % 3 == 0:
-                return {"type": "taunt"}
+            # Every third round: a coordinated strike at the weakest link
             target = min(party_alive, key=lambda c: c.hp)
+            if turn_num % 3 == 0:
+                return {"type": "attack", "target": target, "str_mult": 1.3}
         else:
             target = random.choice(party_alive)
 

@@ -3,13 +3,19 @@ from world.tile import World
 from constants import *
 
 class NPC:
-    def __init__(self, name, x, y, color, dialogue, portrait="NP"):
+    def __init__(self, name, x, y, color, dialogue, portrait="NP",
+                 flag_dialogue=None, quest=None):
         self.name     = name
         self.x        = x
         self.y        = y
         self.color    = color
         self.dialogue = dialogue  # list of strings (pages)
         self.portrait = portrait
+        # flag_dialogue: list of (flag, pages) — checked in order, first
+        # matching flag replaces the default dialogue. Put the most
+        # story-advanced flag first.
+        self.flag_dialogue = flag_dialogue or []
+        self.quest    = quest
 
 TOWNS = {
     "tempestora": {
@@ -27,19 +33,55 @@ TOWNS = {
             NPC("STEEL LEGIONNAIRE", 4, 8, (100, 90, 70),
                 ["WE'VE HELD THIS SECTOR FOR SIXTY DAYS. SIXTY DAYS WITH NO REINFORCEMENTS.",
                  "THE COMMISSAR SAYS YARRICK HIMSELF KNOWS OUR SITUATION. KNOWING AIN'T HELPING."],
-                "SL"),
+                "SL",
+                flag_dialogue=[
+                    (FLAG_FINAL_DONE,
+                     ["YOU'RE THE ONES WHO BROUGHT DOWN THE BEAST HIMSELF.",
+                      "SIXTY DAYS I HELD THIS WALL. WORTH EVERY ONE OF THEM."]),
+                    (FLAG_MANUFACTORUM_CLEAR,
+                     ["THE FORGE-DISTRICT IS OURS AGAIN? EMPEROR'S TEETH.",
+                      "WORD IS YOU'RE HEADED FOR THE IRON FORTRESS. LIGHT A FIRE FOR US IN THERE."]),
+                    (FLAG_ENCAMPMENT_CLEAR,
+                     ["YOU KRUMPED GORKAMORKA? THE WHOLE GARRISON IS TALKING ABOUT IT.",
+                      "FIRST GOOD NEWS IN SIXTY DAYS. MAYBE WE HOLD THIS ROCK AFTER ALL."]),
+                ]),
             NPC("COMMISSAR ADJUTANT", 3, 14, (60, 60, 80),
                 ["COMMISSAR YARRICK'S ORDERS: HOLD HIVE TEMPESTORA AT ALL COSTS.",
                  "FIND WHAT'S IN THAT ENCAMPMENT. KILL IT. COME BACK. IN THAT ORDER."],
-                "CA"),
+                "CA",
+                flag_dialogue=[
+                    (FLAG_MANUFACTORUM_CLEAR,
+                     ["YARRICK'S ORDERS: THE IRON FORTRESS. GHAZGHKULL HIMSELF.",
+                      "AND IF YOU CAN SILENCE THAT WARP BEACON IN THE CRASHED ROK FIRST — DO IT.",
+                      "EVERY WAAAGH! IT CALLS DOWN IS ANOTHER MILLION GREENSKINS."]),
+                    (FLAG_CAVES_CLEAR,
+                     ["THE CAVES ARE CLEAR AND THE REFUGEES ARE COMING HOME. GOOD WORK.",
+                      "NEXT: THE MANUFACTORUM. GROTSNIK IS BUILDING SOMETHING IN THERE.",
+                      "YARRICK WANTS IT BROKEN. SO DO I."]),
+                    (FLAG_ENCAMPMENT_CLEAR,
+                     ["GORKAMORKA IS DEAD. ACCEPTABLE WORK.",
+                      "NOW THE FUNGAL CAVES. SOMETHING IN THERE IS EATING PATROLS WHOLE.",
+                      "THE REFUGEES WHO FLED INTO THOSE TUNNELS ARE STILL UNACCOUNTED FOR."]),
+                ]),
             NPC("REFUGEE", 8, 20, (80, 70, 60),
                 ["THE ORKS CAME THROUGH OUR SECTOR LAST NIGHT. THE THINGS WITH TOO MANY TEETHS.",
-                 "MY FAMILY WAS IN THE LOWER DECKS. THEY'RE STILL THERE. PLEASE."],
-                "RF"),
+                 "MY FAMILY FLED INTO THE FUNGAL CAVES. THEY'RE STILL DOWN THERE. PLEASE."],
+                "RF",
+                quest="refugee_family",
+                flag_dialogue=[
+                    (FLAG_REFUGEE_REWARD,
+                     ["MY DAUGHTER ASKS ABOUT THE WARRIORS WHO SAVED HER EVERY NIGHT.",
+                      "I TELL HER: THE EMPEROR SENDS HIS OWN, WHEN THE NEED IS GREATEST."]),
+                ]),
             NPC("TECH-ADEPT", 15, 5, (60, 100, 80),
                 ["THE MANUFACTORUM MACHINE SPIRITS ARE SILENT. THAT IS WRONG. THEY SHOULD SCREAM.",
                  "THE ORKS HAVE DONE SOMETHING TERRIBLE TO THE FORGE-DISTRICT. THE OMNISSIAH WEEPS."],
-                "TC"),
+                "TC",
+                flag_dialogue=[
+                    (FLAG_MANUFACTORUM_CLEAR,
+                     ["THE MACHINE SPIRITS SING AGAIN. FAINTLY. WOUNDED. BUT THEY SING.",
+                      "THE OMNISSIAH DOES NOT FORGET SUCH SERVICE. NEITHER DO I."]),
+                ]),
             NPC("FIELD APOTHECARY", 14, 8, (120, 120, 150),
                 ["I CAN PATCH YOUR WOUNDS. I CANNOT PATCH THE WAAAGH!",
                  "REST HERE. THE SHRINE STILL FUNCTIONS. FOR NOW. EMPEROR WILLING."],
@@ -65,23 +107,49 @@ TOWNS = {
                 ["RIOTERS IN MY HIVE? THE LOWER DECKS ARE ALWAYS RESTLESS. THIS IS NOTHING NEW.",
                  "WHATEVER IS HAPPENING IN THE ASH WASTES IS NO CONCERN OF THE NOBLE HOUSES.",
                  "THE SEALS WILL HOLD. THE ORKS CANNOT BREACH HIVE INFERNUS. I AM CERTAIN."],
-                "HL"),
+                "HL",
+                flag_dialogue=[
+                    (FLAG_MANUFACTORUM_CLEAR,
+                     ["A GARGANT. THEY WERE BUILDING A GARGANT THREE DAYS' MARCH FROM MY WALLS.",
+                      "I... MAY HAVE MISJUDGED THE SEVERITY OF THE SITUATION.",
+                      "THE NOBLE HOUSES' COFFERS ARE OPEN TO THE WAR EFFORT. ALL OF THEM."]),
+                ]),
             NPC("INQUISITORIAL ACOLYTE", 16, 5, (80, 80, 120),
                 ["MY INQUISITOR WAS KILLED AT THE MANUFACTORUM BREACH. I HAVE BEEN WAITING.",
                  "GROTSNIK'S FORCES HOLD THE MANUFACTORUM. SOMETHING LARGE IS BEING BUILT THERE.",
                  "GET IN. FIND OUT WHAT IT IS. THE INQUISITION WILL WANT TO KNOW."],
-                "IA"),
+                "IA",
+                flag_dialogue=[
+                    (FLAG_ROK_CLEAR,
+                     ["THE BEACON IS DEAD. I FELT IT THROUGH MY MASTER'S OLD INSTRUMENTS.",
+                      "GHAZGHKULL IS ALONE ON THIS WORLD NOW. FINISH IT."]),
+                    (FLAG_MANUFACTORUM_CLEAR,
+                     ["GROTSNIK'S RECORDS CONFIRM MY MASTER'S SUSPICION: A WARP BEACON.",
+                      "IT SITS IN THE CORE OF THE CRASHED ROK, SOUTHEAST OF THE MANUFACTORUM.",
+                      "EVERY HOUR IT SINGS, MORE WAAAGH!S TURN TOWARD ARMAGEDDON. SILENCE IT."]),
+                ]),
             NPC("DYING ASTROPATH", 16, 14, (100, 80, 140),
                 ["I HAVE SEEN... IN THE WARP... THE GREAT GREEN TIDE...",
                  "GHAZGHKULL IS MORE THAN A WARLORD. HE IS A PROPHET OF THEIR GODS.",
                  "GORK AND MORK STRENGTHEN HIM. FAITH-BASED POWERS MAY NOT WOUND HIM IN HIS FINAL FORM.",
                  "THE IRON FORTRESS IS REAL. IT MOVES. IT BREATHES WITH WAAAGH! ENERGY."],
-                "DA"),
+                "DA",
+                flag_dialogue=[
+                    (FLAG_ROK_CLEAR,
+                     ["THE SONG IN THE WARP... HAS STOPPED.",
+                      "FOR THE FIRST TIME IN MONTHS, I HEAR SILENCE. BLESSED SILENCE.",
+                      "HE KNOWS WHAT YOU DID. HE IS ALONE NOW. AND HE IS ANGRY."]),
+                ]),
             NPC("RECLAIMED TRADE FACTOR", 4, 22, (60, 60, 60),
                 ["I ASK NO QUESTIONS ABOUT THE ORK WEAPONS YOU ARE CARRYING.",
                  "I SELL WHAT CANNOT BE SOLD THROUGH NORMAL CHANNELS. PAY. TAKE. GO.",
                  "ALSO: THE FUNGAL CAVES HAVE SOMETHING WORSE THAN GROTS IN THEM. YOU WILL SEE."],
-                "TF"),
+                "TF",
+                flag_dialogue=[
+                    (FLAG_CAVES_CLEAR,
+                     ["SO IT WAS A SQUIGGOTH THE SIZE OF A HAB-BLOCK. TOLD YOU SO.",
+                      "SQUIG HIDE FETCHES A FINE PRICE THESE DAYS. IF YOU HAVE ANY... PAY. TAKE. GO."]),
+                ]),
         ],
         "has_shrine": True,
         "shrine_pos": (20, 20),

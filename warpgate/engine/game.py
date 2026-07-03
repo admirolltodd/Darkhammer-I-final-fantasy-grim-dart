@@ -125,6 +125,8 @@ class Game:
         self.battle_waiting_enemy  = False
         self.battle_enemy_delay    = 0
         self.battle_action_queue   = []
+        self.battle_pending_action = None   # deferred action awaiting target pick
+        self.pending_battle        = None   # battle deferred until dialogue closes
         self.damage_floats         = []
         self.float_timer           = 0
         self.levelup_queue         = []
@@ -147,6 +149,7 @@ class Game:
         self.ending_choice = None
         self.ending_tick   = 0
         self.ending_shown  = False
+        self.ending_cursor = 0
 
         # Shop state
         self.shop_items    = []
@@ -198,7 +201,8 @@ class Game:
 
     def _update(self):
         # Reset per-frame movement flag so walk animation idles when standing still
-        self.party.moving = False
+        if self.party:
+            self.party.moving = False
         s = self.state
         if s == STATE_TITLE:        self._update_title()
         elif s == STATE_CLASS_SELECT: self._update_class_select()
@@ -296,7 +300,10 @@ class Game:
                                                  self.battle.gelt_gained if self.battle else 0,
                                                  self.battle.items_gained if self.battle else [])
         elif s == STATE_ENDING:
-            self.renderer.render_ending(self.ending_choice, self.ending_tick)
+            rok = self.party.get_flag(FLAG_ROK_CLEAR) if self.party else False
+            corr = self.party.corruption if self.party else 0
+            self.renderer.render_ending(self.ending_choice, self.ending_tick,
+                                        self.ending_cursor, rok, corr)
 
         self.renderer.present(self.screen)
 
@@ -351,6 +358,7 @@ class Game:
         self.world, self.locations = build_world()
         self.party.world_x = 5
         self.party.world_y = 5
+        self.session_start = time.time()
 
         self._show_story_sequence(loader.story()["intro"], STATE_WORLD)
         self.audio.play_music("worldmap")
@@ -477,6 +485,12 @@ class Game:
                                         ["THE IRON FORTRESS IS SEALED. DEFEAT MAD DOK GROTSNIK IN THE MANUFACTORUM FIRST."],
                                         STATE_WORLD)
                     return
+                if lid == "dungeon_void" and not self.party.get_flag(FLAG_MANUFACTORUM_CLEAR):
+                    self._show_dialogue("SEALED HULK", "WL",
+                                        ["THE ROK'S HULL IS SEALED TIGHT. WHATEVER IS INSIDE, IT IS NOT READY TO BE FOUND.",
+                                         "GROTSNIK'S RECORDS IN THE MANUFACTORUM MAY EXPLAIN WHAT THIS THING IS FOR."],
+                                        STATE_WORLD)
+                    return
 
                 self.current_dungeon_id = lid
                 cfg = DUNGEON_CONFIGS[lid]
@@ -522,7 +536,25 @@ class Game:
             # Check NPC
             npc = self.current_town.get_npc_at(self.party.world_x, self.party.world_y)
             if npc:
-                self._show_dialogue(npc.name, npc.portrait, npc.dialogue, STATE_TOWN)
+                pages = npc.dialogue
+                # Flag-aware dialogue: first matching flag wins (most recent first)
+                for flag, alt_pages in getattr(npc, "flag_dialogue", None) or []:
+                    if self.party.get_flag(flag):
+                        pages = alt_pages
+                        break
+                # Refugee quest payoff: family rescued when the caves were cleared
+                if (getattr(npc, "quest", None) == "refugee_family"
+                        and self.party.get_flag(FLAG_CAVES_CLEAR)
+                        and not self.party.get_flag(FLAG_REFUGEE_REWARD)):
+                    self.party.set_flag(FLAG_REFUGEE_REWARD)
+                    self.party.add_gelt(300)
+                    self.party.adjust_morale(2)
+                    pages = ["YOU FOUND THEM. THE UNDERTUNNELS — THEY WERE SHELTERING FROM THE SQUIGGOTH.",
+                             "MY DAUGHTER IS ALIVE. MY WHOLE FAMILY IS ALIVE.",
+                             "TAKE THIS. ALL OUR SAVINGS. IT'S NOTHING NEXT TO WHAT YOU GAVE US.",
+                             "(RECEIVED 300 GELT. WARBAND MORALE RISES.)"]
+                    self.audio.play_sfx("heal")
+                self._show_dialogue(npc.name, npc.portrait, pages, STATE_TOWN)
                 return
             # Check door / shrine
             tile = self.current_town.get_tile(self.party.world_x, self.party.world_y)
@@ -627,8 +659,13 @@ class Game:
                         self._complete_dungeon()
 
     def _start_boss_fight(self, boss, boss_id):
-        if boss_id == "ghazghkull_p1" and not self.party.get_flag(FLAG_MIDPOINT_SEEN):
-            self._show_story_sequence(loader.story()["before_final_boss"], STATE_BATTLE)
+        # Ghazghkull addresses the warband from his throne before the fight.
+        # Battle is deferred until the speech finishes (see _update_dialogue).
+        if boss_id == "ghazghkull_p1" and not self.party.get_flag(FLAG_GHAZ_SPEECH):
+            self.party.set_flag(FLAG_GHAZ_SPEECH)
+            self.pending_battle = ([boss], True, boss_id)
+            self._show_story_sequence(loader.story()["before_final_boss"], STATE_DUNGEON)
+            return
         self._start_battle([boss], is_boss=True, boss_id=boss_id)
 
     def _open_chest(self, x, y):
@@ -665,10 +702,10 @@ class Game:
     def _complete_dungeon(self):
         did = self.current_dungeon_id
         flag_map = {
-            "dungeon1": FLAG_DUNGEON1_CLEAR,
-            "dungeon2": FLAG_DUNGEON2_CLEAR,
-            "dungeon3": FLAG_DUNGEON3_CLEAR,
-            "dungeon_void": FLAG_VOID_CLEAR,
+            "dungeon1": FLAG_ENCAMPMENT_CLEAR,
+            "dungeon2": FLAG_CAVES_CLEAR,
+            "dungeon3": FLAG_MANUFACTORUM_CLEAR,
+            "dungeon_void": FLAG_ROK_CLEAR,
         }
         if did in flag_map:
             self.party.set_flag(flag_map[did])
@@ -719,17 +756,23 @@ class Game:
                 break
             else:
                 enemies.append(Enemy(edata, scale))
-        self._start_battle(enemies)
+        self._start_battle(enemies, zone=zone)
 
-    def _start_battle(self, enemies, is_boss=False, boss_id=None):
+    def _start_battle(self, enemies, is_boss=False, boss_id=None, zone=None):
         self.audio.play_music("boss" if is_boss else "battle")
         self.battle = Battle(self.party, enemies, self.audio)
+        if zone is None:
+            zone = self.current_dungeon.zone if self.current_dungeon else ZONE_ASH_WASTES
+        self.battle.zone = zone
         self.battle_boss_id = boss_id
         self.battle_is_boss = is_boss
         self.battle_phase   = "select_char"
         self.battle_char_idx = self._next_alive_char(-1)
         self.battle_menu["selected"] = 0
         self.battle_menu["sub"] = False
+        self.battle_menu["target_mode"] = None
+        self.battle_menu["target_idx"] = 0
+        self.battle_pending_action = None
         self.battle_waiting_enemy = False
         self.battle_result_shown = False
         self.damage_floats = []
@@ -774,13 +817,64 @@ class Game:
 
         bm = self.battle_menu
 
-        if bm["sub"]:
+        if bm.get("target_mode"):
+            self._update_battle_targeting(char)
+        elif bm["sub"]:
             self._update_battle_sub_menu(char)
         else:
             self._update_battle_top_menu(char)
 
         # Check end
         self.battle.check_end()
+
+    def _target_pool(self, mode):
+        if mode == "enemy":
+            return self.battle.alive_enemies()
+        if mode == "fallen":
+            return [m for m in self.party.members if not m.alive]
+        return self.battle.alive_party()
+
+    def _update_battle_targeting(self, char):
+        bm = self.battle_menu
+        pool = self._target_pool(bm["target_mode"])
+        if not pool:
+            bm["target_mode"] = None
+            self.battle_pending_action = None
+            return
+        bm["target_idx"] %= len(pool)
+        if self.input.pressed("left") or self.input.pressed("up"):
+            bm["target_idx"] = (bm["target_idx"] - 1) % len(pool)
+            self.audio.play_sfx("cursor")
+        elif self.input.pressed("right") or self.input.pressed("down"):
+            bm["target_idx"] = (bm["target_idx"] + 1) % len(pool)
+            self.audio.play_sfx("cursor")
+        elif self.input.pressed("confirm"):
+            target = pool[bm["target_idx"]]
+            action = self.battle_pending_action
+            bm["target_mode"] = None
+            self.battle_pending_action = None
+            self.audio.play_sfx("confirm")
+            if action is None:
+                return
+            kind = action[0]
+            if kind == "attack":
+                self.battle.do_attack(char, target)
+            elif kind == "power":
+                self.battle.do_use_power(char, action[1], [target])
+            elif kind == "item":
+                self.battle.do_use_item(char, action[1], [target])
+            self._advance_battle_turn()
+        elif self.input.pressed("cancel"):
+            bm["target_mode"] = None
+            self.battle_pending_action = None
+            self.audio.play_sfx("cancel")
+
+    def _begin_targeting(self, mode, pending_action):
+        bm = self.battle_menu
+        bm["sub"] = False
+        bm["target_mode"] = mode
+        bm["target_idx"] = 0
+        self.battle_pending_action = pending_action
 
     def _update_battle_top_menu(self, char):
         bm = self.battle_menu
@@ -794,10 +888,8 @@ class Game:
             sel = bm["selected"]
             self.audio.play_sfx("confirm")
             if sel == 0:  # ENGAGE
-                targets = self.battle.alive_enemies()
-                if targets:
-                    self.battle.do_attack(char, targets[0])
-                    self._advance_battle_turn()
+                if self.battle.alive_enemies():
+                    self._begin_targeting("enemy", ("attack",))
             elif sel == 1:  # RITES
                 if char.status == STATUS_VOX_JAMMED:
                     self.battle.log.append(f"{char.name} IS VOX-JAMMED! CANNOT USE RITES!")
@@ -844,24 +936,43 @@ class Game:
                     if res == RES_FAITH and char.faith_pts < cost:
                         self.battle.log.append("INSUFFICIENT ACTS OF FAITH!")
                         return
-                    targets = self._get_power_targets(power, char)
-                    self.battle.do_use_power(char, power, targets)
-                    bm["sub"] = False
-                    self._advance_battle_turn()
+                    ttype = power.get("target", "one_enemy")
+                    if ttype in ("one_enemy", "one_enemy_or_ally"):
+                        self._begin_targeting("enemy", ("power", power))
+                    elif ttype in ("one_ally", "one_any"):
+                        self._begin_targeting("ally", ("power", power))
+                    elif ttype == "one_fallen":
+                        if any(not m.alive for m in self.party.members):
+                            self._begin_targeting("fallen", ("power", power))
+                        else:
+                            self.battle.log.append("NO FALLEN TO RESTORE!")
+                    else:
+                        # Multi-target — no pick needed
+                        targets = self._get_power_targets(power, char)
+                        self.battle.do_use_power(char, power, targets)
+                        bm["sub"] = False
+                        self._advance_battle_turn()
             elif bm["selected"] == 2:  # Item
                 if sel_idx < len(sub_data):
                     item_id, item = sub_data[sel_idx]
-                    target_type = item.get("target", "one_ally")
-                    if "ally" in target_type:
-                        targets = [self.party.alive_members[0]] if self.party.alive_members else []
-                    elif "fallen" in target_type:
-                        fallen = [m for m in self.party.members if not m.alive]
-                        targets = [fallen[0]] if fallen else []
+                    ttype = item.get("target", "one_ally")
+                    if "fallen" in ttype:
+                        if any(not m.alive for m in self.party.members):
+                            self._begin_targeting("fallen", ("item", item))
+                        else:
+                            self.battle.log.append("NO FALLEN TO REVIVE!")
+                    elif "all" in ttype:
+                        if "ally" in ttype:
+                            targets = self.battle.alive_party()
+                        else:
+                            targets = self.battle.alive_enemies()
+                        self.battle.do_use_item(char, item, targets)
+                        bm["sub"] = False
+                        self._advance_battle_turn()
+                    elif "ally" in ttype:
+                        self._begin_targeting("ally", ("item", item))
                     else:
-                        targets = [self.battle.alive_enemies()[0]] if self.battle.alive_enemies() else []
-                    self.battle.do_use_item(char, item, targets)
-                    bm["sub"] = False
-                    self._advance_battle_turn()
+                        self._begin_targeting("enemy", ("item", item))
         elif self.input.pressed("cancel"):
             bm["sub"] = False
 
@@ -953,16 +1064,19 @@ class Game:
 
     def _handle_boss_victory(self):
         boss_id = self.battle_boss_id
+        story = loader.story()
         if boss_id == "ork_warboss_gorkamorka":
             self.party.set_flag(FLAG_ENCAMPMENT_CLEAR)
             if "gorkamorka_banner" in self.item_db:
                 self.party.add_item("gorkamorka_banner")
             self._complete_dungeon()
+            self._show_story_sequence(story.get("encampment_cleared", []), STATE_WORLD)
         elif boss_id == "squiggoth_great":
             self.party.set_flag(FLAG_CAVES_CLEAR)
             if "great_squiggoth_tusk" in self.item_db:
                 self.party.add_item("great_squiggoth_tusk")
             self._complete_dungeon()
+            self._show_story_sequence(story.get("caves_cleared", []), STATE_WORLD)
         elif boss_id == "mad_dok":
             self.party.set_flag(FLAG_MANUFACTORUM_CLEAR)
             if "grotnik_tools" in self.item_db:
@@ -970,7 +1084,7 @@ class Game:
             self._complete_dungeon()
             if not self.party.get_flag(FLAG_MIDPOINT_SEEN):
                 self.party.set_flag(FLAG_MIDPOINT_SEEN)
-                self._show_story_sequence(loader.story()["midpoint"], STATE_WORLD)
+                self._show_story_sequence(story["midpoint"], STATE_WORLD)
         elif boss_id == "ghazghkull_p1":
             # Phase 2 transition — WAAAGH! reaches full intensity
             if "ghazghkull_p2" in self.enemy_db:
@@ -978,24 +1092,25 @@ class Game:
                 self._start_battle([Enemy(edata)], is_boss=True, boss_id="ghazghkull_p2")
             else:
                 self.party.set_flag(FLAG_FINAL_DONE)
-                self._show_story_sequence(loader.story()["ending_choice"], STATE_ENDING)
+                self._show_story_sequence(story["ending_choice"], STATE_ENDING)
         elif boss_id == "ghazghkull_p2":
             self.party.set_flag(FLAG_FINAL_DONE)
             if "ghazghkull_banner" in self.item_db:
                 self.party.add_item("ghazghkull_banner")
-            self._show_story_sequence(loader.story()["ending_choice"], STATE_ENDING)
+            self._show_story_sequence(story["ending_choice"], STATE_ENDING)
         elif boss_id == "warboss_skullkrumpa":
             self.party.set_flag(FLAG_ROK_CLEAR)
             if "skullkrumpa_klaw" in self.item_db:
                 self.party.add_item("skullkrumpa_klaw")
             self._complete_dungeon()
+            self._show_story_sequence(story.get("rok_cleared", []), STATE_WORLD)
         else:
             self._check_levelups_after_battle()
             self._goto(STATE_VICTORY)
             self.tick = 0
 
     def _check_levelups_after_battle(self):
-        self.levelup_queue = []
+        self.levelup_queue = list(getattr(self.battle, "levelups", []))
 
     # ── Menu ───────────────────────────────────────────────────────────────────
 
@@ -1106,6 +1221,8 @@ class Game:
             data = self.save_slots[self.save_selected]
             if data:
                 self.party = Party.from_dict(data, self.item_db)
+                # Resume the playtime clock from the saved value
+                self.session_start = time.time() - self.party.playtime
                 self.world, self.locations = build_world()
                 self._goto(STATE_WORLD)
                 self.audio.play_music("worldmap")
@@ -1130,6 +1247,13 @@ class Game:
                     self.story_page += 1
                     self._show_dialogue("TRANSMISSION", "TX",
                                         [self.story_sequence[self.story_page]], self.story_return)
+                    return
+                self.story_sequence = []
+                # A battle deferred behind this dialogue (boss speeches) starts now
+                if self.pending_battle:
+                    enemies, is_boss, boss_id = self.pending_battle
+                    self.pending_battle = None
+                    self._start_battle(enemies, is_boss=is_boss, boss_id=boss_id)
 
     def _update_gameover(self):
         if self.tick > 180 and self.input.pressed("confirm"):
@@ -1172,30 +1296,26 @@ class Game:
 
     def _update_ending(self):
         self.ending_tick += 1
-        story = loader.story()
-        end_lines = story.get("ending_choice", [])
 
-        if not self.ending_shown and self.ending_tick > len(end_lines) * 40:
-            # Show choice
-            self.ending_shown = True
-
-        if self.ending_shown:
-            if self.input.pressed("confirm"):
-                self.ending_choice = "sacrifice"
-                self._goto(STATE_ENDING)
+        if self.ending_choice is None:
+            # Choice screen: execute Ghazghkull or leave him to Armageddon's defenders
+            if self.input.pressed("up") or self.input.pressed("down"):
+                self.ending_cursor = 1 - self.ending_cursor
+                self.audio.play_sfx("cursor")
+            elif self.input.pressed("confirm") and self.ending_tick > 30:
+                self.ending_choice = "execution" if self.ending_cursor == 0 else "mercy"
                 self.ending_tick = 0
-                self.ending_shown = False
-            elif self.input.pressed("cancel"):
-                self.ending_choice = "gambit"
-                self._goto(STATE_ENDING)
-                self.ending_tick = 0
-                self.ending_shown = False
+                self.audio.play_sfx("confirm")
+            return
 
-        if self.ending_choice and self.ending_tick > 400:
-            # Credits / title
+        # Epilogue rolling — return to title once done
+        if self.ending_tick > 700 and self.input.pressed("confirm"):
             self._goto(STATE_TITLE)
             self.audio.play_music("title")
             self.party = None
+            self.ending_choice = None
+            self.ending_cursor = 0
+            self.ending_tick = 0
 
     # ── Helpers ────────────────────────────────────────────────────────────────
 

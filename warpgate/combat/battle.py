@@ -28,6 +28,7 @@ class Battle:
         self.xp_gained  = 0
         self.gelt_gained= 0
         self.items_gained = []
+        self.levelups   = []   # (member, old_stats, new_stats) recorded on victory
         self.terrified  = False
         self.last_psyker_power = None
         self.sister_miraculous_used = False
@@ -315,6 +316,8 @@ class Battle:
 
         elif effect == "mass_kill":
             self._log(f"{caster.name}: EXTERMINATUS! PURGE THEM ALL!")
+            self.party.adjust_corruption(4)
+            self._log("SUCH POWER HAS A PRICE. CORRUPTION +4.")
             for t in targets:
                 val = sp.get("value", 999)
                 if t.boss:
@@ -328,6 +331,7 @@ class Battle:
                     self._on_enemy_death(t)
 
         elif effect == "mind_war":
+            self.party.adjust_corruption(2)
             for t in targets:
                 self_dmg = max(1, int(caster.max_hp * 0.25))
                 caster.hp = max(0, caster.hp - self_dmg)
@@ -530,6 +534,8 @@ class Battle:
         roll1 = random.randint(1, 6)
         roll2 = random.randint(1, 6)
         if roll1 + roll2 == 2:
+            self.party.adjust_corruption(3)
+            self._log("THE WARP LEAVES ITS MARK. CORRUPTION +3.")
             peril = random.randint(0, 3)
             if peril == 0:
                 dmg = max(1, caster.max_hp // 4)
@@ -619,6 +625,8 @@ class Battle:
                 if res_type == "warp":
                     t.restore_warp(val)
                     self._log(f"{t.name} WARP CHARGES RESTORED +{val}!")
+                    self.party.adjust_corruption(1)
+                    self._log("RAW WARP DUST STAINS THE SOUL. CORRUPTION +1.")
                 elif res_type == "faith":
                     t.restore_faith(val)
                     self._log(f"{t.name} ACTS OF FAITH RESTORED +{val}!")
@@ -749,43 +757,103 @@ class Battle:
         alive = self.alive_party()
         if not alive:
             return
-        if ability == "waaagh_charge":
+
+        def hit_all(mult, cry):
+            self._log(cry)
             for t in alive:
-                dmg = max(1, int(enemy.str * 1.5) + random.randint(5, 15))
-                actual, _ = t.take_damage(dmg)
-                self._log(f"SKRAK WAAAGH! CHARGES! {t.name} TAKES {actual}HP!")
+                dmg = max(1, int(enemy.str * mult) + random.randint(5, 15))
+                actual, negated = t.take_damage(dmg)
+                if negated:
+                    self._log(f"{t.name}'S IRON HALO HOLDS!")
+                    continue
+                self._log(f"{t.name} TAKES {actual}HP!")
                 if not t.alive:
+                    self._log(f"{t.name} HAS FALLEN!")
                     self.party.adjust_morale(-2)
+
+        if ability == "waaagh_charge":
+            hit_all(1.2, f"{enemy.name} WAAAGH!-CHARGES THE ENTIRE WARBAND!")
+
+        elif ability == "waaagh_prime":
+            enemy.str = int(enemy.str * 1.1)
+            hit_all(1.4, f"{enemy.name} BELLOWS DA WAAAGH! PRIME! THE FORTRESS SHAKES!")
+
+        elif ability == "stampede":
+            hit_all(1.4, f"{enemy.name} STAMPEDES THROUGH THE WARBAND!")
+
+        elif ability == "unstoppable_waaagh":
+            t = random.choice(alive)
+            dmg = max(1, int(enemy.str * 2.2) + random.randint(10, 25))
+            actual, negated = t.take_damage(dmg)
+            if negated:
+                self._log(f"UNSTOPPABLE WAAAGH! — BUT {t.name}'S IRON HALO HOLDS!")
+            else:
+                self._log(f"UNSTOPPABLE WAAAGH! {enemy.name} OBLITERATES {t.name} FOR {actual}HP!")
+                if not t.alive:
+                    self._log(f"{t.name} HAS FALLEN!")
+                    self.party.adjust_morale(-2)
+
         elif ability == "ead_butt":
             t = random.choice(alive)
-            t.apply_status(STATUS_CATATONIC, 2)
-            self._log(f"SKRAK 'EAD BUTTS {t.name}! STUNNED!")
-        elif ability == "gorks_favor":
-            heal = 100
+            if t.apply_status(STATUS_CATATONIC, 2):
+                self._log(f"{enemy.name} 'EAD-BUTTS {t.name}! STUNNED!")
+            else:
+                self._log(f"{enemy.name} 'EAD-BUTTS {t.name} — BUT {t.name} SHRUGS IT OFF!")
+
+        elif ability == "call_da_boyz":
+            if self.party.get_flag(FLAG_ROK_CLEAR):
+                self._log(f"{enemy.name} CALLS FOR DA BOYZ... DA BEACON IS DEAD. NO ONE ANSWERS.")
+            elif len(self.alive_enemies()) >= 5:
+                self._log(f"{enemy.name} CALLS FOR DA BOYZ — THE ROOM IS ALREADY FULL OF ORKS!")
+            else:
+                from entities.enemy import Enemy
+                edata = loader.enemies()
+                if "ork_boy_slugga" in edata:
+                    for _ in range(2):
+                        self.enemies.append(Enemy(dict(edata["ork_boy_slugga"], id="ork_boy_slugga")))
+                    self._log(f"{enemy.name} CALLS DA BOYZ! TWO SLUGGA BOYZ CRASH THROUGH THE WALL!")
+                    self._build_turn_order()
+
+        elif ability == "painboy_fix":
+            heal = max(50, enemy.max_hp // 4)
             enemy.hp = min(enemy.max_hp, enemy.hp + heal)
-            self._log(f"GORK SMILES UPON SKRAK! HEALED {heal}HP!")
-        elif ability == "summon_genestealers":
-            from entities.enemy import Enemy
-            edata = loader.enemies()
+            enemy.status = STATUS_NONE
+            self._log(f"{enemy.name} JABS HIMSELF WITH A MYSTERY SYRINGE! HEALED {heal}HP!")
+
+        elif ability == "squig_injection":
+            t = random.choice(alive)
+            dmg = max(1, int(enemy.str * 0.8))
+            actual, _ = t.take_damage(dmg)
+            self._log(f"{enemy.name} INJECTS {t.name} WITH SQUIG EXTRACT! -{actual}HP!")
+            if t.alive and t.apply_status(STATUS_PLAGUE, 3):
+                self._log(f"{t.name} SUFFERS {STATUS_NAMES[STATUS_PLAGUE]}!")
+
+        elif ability == "go_fasta":
+            self._log(f"{enemy.name} SHOUTS 'GO FASTA!' AND STRIKES TWICE!")
             for _ in range(2):
-                e = Enemy(dict(edata["genestealer"], id="genestealer"))
-                self.enemies.append(e)
-            self._log(f"GNAWFANG SUMMONS GENESTEALERS FROM THE HIVE!")
-            self._build_turn_order()
-        elif ability == "synapse_lock_all":
-            for t in alive:
-                t.apply_status(STATUS_SYNLOCK, 2)
-            self._log(f"GNAWFANG'S SYNAPSE OVERWHELMS THE PARTY!")
+                targets = self.alive_party()
+                if not targets:
+                    break
+                self._execute_enemy_action(enemy, {"type": "attack", "target": random.choice(targets)})
+
+        elif ability == "gorks_favor" or ability == "gork_morka_blessing":
+            heal = max(100, enemy.max_hp // 5)
+            enemy.hp = min(enemy.max_hp, enemy.hp + heal)
+            enemy.str += 3
+            self._log(f"GORK AND MORK SMILE UPON {enemy.name}! HEALED {heal}HP! HIS RAGE GROWS!")
+
+        elif ability == "iron_hide":
+            enemy.defense += 8
+            self._log(f"{enemy.name}'S MEGA-ARMOUR PLATES SLAM SHUT! IRON HIDE!")
+
+        elif ability == "shake_off":
+            enemy.status = STATUS_NONE
+            enemy.status_turns = 0
+            enemy.debuffs = {}
+            self._log(f"{enemy.name} SHAKES OFF EVERY AFFLICTION WITH A ROAR!")
+
         elif ability == "phase2_transition":
-            self._log(f"LORD MALACHAR FALLS... AND SOMETHING WORSE RISES!")
-        elif ability == "phase2_summon":
-            pass  # handled by game.py
-        elif ability == "copy_last_power":
-            self._log(f"THE ARCHITECT MIRRORS YOUR OWN POWER AGAINST YOU!")
-        elif ability == "faith_heal":
-            pass  # handled in take_damage
-        elif ability == "always_first":
-            pass  # handled in turn order
+            self._log(f"{enemy.name}'S MEGA-ARMOUR CRACKS... BUT DA WAAAGH! BURNS BRIGHTER!")
 
     def tick_vortex(self):
         if self.vortex_turns > 0:
@@ -861,8 +929,14 @@ class Battle:
         return self.result
 
     def _distribute_rewards(self):
+        self.levelups = []
         for m in self.alive_party():
-            leveled = m.gain_xp(self.xp_gained)
+            old = {"HP": m.max_hp, "STR": m.base_str, "DEF": m.base_def,
+                   "AGI": m.base_agi, "FAITH": m.base_faith, "PSY": m.base_psy}
+            if m.gain_xp(self.xp_gained):
+                new = {"HP": m.max_hp, "STR": m.base_str, "DEF": m.base_def,
+                       "AGI": m.base_agi, "FAITH": m.base_faith, "PSY": m.base_psy}
+                self.levelups.append((m, old, new))
         self.party.add_gelt(self.gelt_gained)
         for item in self.items_gained:
             self.party.add_item(item["id"])
